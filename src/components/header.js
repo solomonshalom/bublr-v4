@@ -6,10 +6,7 @@ const Header = props => (
     css={css`
       display: flex;
       margin-bottom: 5rem;
-
-      a:first-of-type {
-        margin-left: auto;
-      }
+      justify-content: flex-end;
 
       a {
         display: block;
