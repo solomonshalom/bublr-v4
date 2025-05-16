@@ -8,13 +8,9 @@ export default function NotFound() {
   return (
     <Container maxWidth="640px">
       <Head>
-        <title>Not Found</title>
-
-        <script defer src="https://cloud.umami.is/script.js" data-website-id="a0cdb368-20ae-4630-8949-ac57917e2ae3"></script>
-      
-        <link rel="manifest" href="https://www.justice.rest/justicerest.webmanifest" />
-        <meta name="mobile-web-app-capable" content="yes" />
-      
+        <title>404 - Page Not Found | Bublr</title>
+        <meta name="robots" content="noindex, follow" />
+        <meta name="description" content="The page you are looking for could not be found. Navigate back to Bublr homepage." />
       </Head>
       <h1>404</h1>
       <p
@@ -22,7 +18,7 @@ export default function NotFound() {
           margin-top: 1.5rem;
         `}
       >
-        OH NO! You have found ___. Return by clicking <a href="https://justice.rest/dashboard">here</a>
+        Looks like we can&apos;t find what you were looking for.
       </p>
     </Container>
   )

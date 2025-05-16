@@ -1,5 +1,3 @@
-// Those sweet writer links for them to share it to the world <3
-
 /** @jsxImportSource @emotion/react */
 import Head from 'next/head'
 import tinykeys from 'tinykeys'
@@ -11,6 +9,7 @@ import { useAuthState } from 'react-firebase-hooks/auth'
 import { useDocumentData } from 'react-firebase-hooks/firestore'
 import {
   ArrowLeftIcon,
+  CheckIcon,
   Cross2Icon,
   DotsVerticalIcon,
   FontBoldIcon,
@@ -18,7 +17,10 @@ import {
   Link2Icon,
   LinkBreak2Icon,
   StrikethroughIcon,
-  Pencil1Icon
+  CodeIcon,
+  HeadingIcon,
+  ListBulletIcon,
+  UnderlineIcon,
 } from '@radix-ui/react-icons'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 
@@ -28,9 +30,9 @@ import Image from '@tiptap/extension-image'
 import Document from '@tiptap/extension-document'
 import Paragraph from '@tiptap/extension-paragraph'
 import Placeholder from '@tiptap/extension-placeholder'
-
-// Adding support for highlight in tiptap
-import Highlight from '@tiptap/extension-highlight'
+import Underline from '@tiptap/extension-underline'
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
+import { lowlight } from 'lowlight'
 
 import * as Dialog from '@radix-ui/react-dialog'
 
@@ -44,21 +46,6 @@ import ModalOverlay from '../../components/modal-overlay'
 import PostContainer from '../../components/post-container'
 import Button, { IconButton, LinkIconButton } from '../../components/button'
 
-const StyledLabel = (props) => (
-  <label
-    css={css`
-      display: block;
-      margin-bottom: 0.5rem;
-      font-size: 0.9rem;
-      color: var(--grey-3);
-    `}
-    {...props}
-  >
-    {props.children}
-  </label>
-);
-
-
 function SelectionMenu({ editor }) {
   const [editingLink, setEditingLink] = useState(false)
   const [url, setUrl] = useState('')
@@ -66,15 +53,22 @@ function SelectionMenu({ editor }) {
   return (
     <BubbleMenu
       editor={editor}
+      tippyOptions={{ duration: 150 }}
+      shouldShow={({ editor, view, state, oldState, from, to }) => {
+        return editor.isActive('link') || state.selection.content().size > 0
+      }}
       css={css`
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
+        max-width: 500px;
 
         border-radius: 0.5rem;
-        box-shadow: 0 1rem 1rem var(--grey-1);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
         background: var(--grey-5);
         color: var(--grey-1);
         padding: 0.5rem;
+        transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
 
         input {
           background: none;
@@ -84,6 +78,7 @@ function SelectionMenu({ editor }) {
           color: var(--grey-2);
           font-family: 'Inter', sans-serif;
           font-size: 0.8rem;
+          transition: color 0.2s ease;
         }
 
         input::placeholder {
@@ -94,32 +89,49 @@ function SelectionMenu({ editor }) {
 
         input:focus {
           outline: none;
+          color: var(--grey-1);
         }
 
         button {
-          margin: 0 0.5rem;
+          margin: 0 0.25rem;
           background: none;
           border: none;
-          width: 1rem;
-          height: 1rem;
+          width: 1.5rem;
+          height: 1.5rem;
+          border-radius: 0.25rem;
           color: var(--grey-3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.15s ease;
+          cursor: pointer;
+        }
+
+        button:hover {
+          background: rgba(0, 0, 0, 0.1);
+          color: var(--grey-1);
         }
 
         button:focus,
         button.is-active {
           color: var(--grey-1);
+          background: rgba(0, 0, 0, 0.08);
         }
 
-        html[data-theme='dark'] {
-          button:hover {
-            background: rgba(255, 255, 255, 0.1);
-          }
+        html[data-theme='dark'] button:hover {
+          background: rgba(255, 255, 255, 0.1);
         }
 
-        html[data-theme='dark'] {
-          button:hover {
-            background: rgba(0, 0, 0, 0.1);
-          }
+        html[data-theme='dark'] button.is-active {
+          background: rgba(255, 255, 255, 0.15);
+        }
+
+        .separator {
+          width: 1px;
+          height: 1.25rem;
+          background-color: var(--grey-3);
+          margin: 0 0.25rem;
+          opacity: 0.5;
         }
       `}
     >
@@ -129,6 +141,7 @@ function SelectionMenu({ editor }) {
             onClick={() => {
               setEditingLink(false)
             }}
+            title="Back"
           >
             <ArrowLeftIcon />
           </button>
@@ -153,9 +166,10 @@ function SelectionMenu({ editor }) {
               onChange={e => {
                 setUrl(e.target.value)
               }}
+              autoFocus
             />
           </form>
-          <button type="submit">
+          <button type="submit" title="Add link">
             <Link2Icon />
           </button>
         </>
@@ -164,41 +178,69 @@ function SelectionMenu({ editor }) {
           <button
             onClick={() => editor.chain().focus().toggleBold().run()}
             className={editor.isActive('bold') ? 'is-active' : ''}
+            title="Bold"
           >
             <FontBoldIcon />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleItalic().run()}
             className={editor.isActive('italic') ? 'is-active' : ''}
+            title="Italic"
           >
             <FontItalicIcon />
           </button>
-
-          {/* Gotta fix; Showing Yellow instead of Purple
-          <button 
-            onClick={() => editor.chain().focus().toggleHighlight({ color: '#7628AD' }).run()}
-            className={editor.isActive('highlight', { color: '#7628AD' }) ? 'is-active' : ''}
+          <button
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            className={editor.isActive('underline') ? 'is-active' : ''}
+            title="Underline"
           >
-
-           <Pencil1Icon />
-           </button>
-           */}
-           
+            <UnderlineIcon />
+          </button>
           <button
             onClick={() => editor.chain().focus().toggleStrike().run()}
             className={editor.isActive('strike') ? 'is-active' : ''}
+            title="Strikethrough"
           >
             <StrikethroughIcon />
           </button>
+          
+          <div className="separator"></div>
+          
+          <button
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            className={editor.isActive('heading', { level: 2 }) ? 'is-active' : ''}
+            title="Heading"
+          >
+            <HeadingIcon />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            className={editor.isActive('bulletList') ? 'is-active' : ''}
+            title="Bullet List"
+          >
+            <ListBulletIcon />
+          </button>
+          <button
+            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+            className={editor.isActive('codeBlock') ? 'is-active' : ''}
+            title="Code Block"
+          >
+            <CodeIcon />
+          </button>
+          
+          <div className="separator"></div>
+          
           {editor.isActive('link') ? (
-            <button onClick={() => editor.chain().focus().unsetLink().run()}>
+            <button onClick={() => editor.chain().focus().unsetLink().run()} title="Remove Link">
               <LinkBreak2Icon />
             </button>
           ) : (
             <button
               onClick={() => {
                 setEditingLink(true)
+                setUrl('https://')
               }}
+              title="Add Link"
             >
               <Link2Icon />
             </button>
@@ -219,18 +261,7 @@ function Editor({ post }) {
     slug: '',
     excerpt: '',
     published: true,
-    category: '',
-  });
-
-  // Function to handle category change
-  const handleCategoryChange = async (e) => {
-    const newCategory = e.target.value;
-    setClientPost((prevPost) => ({
-      ...prevPost,
-      category: newCategory,
-    }));
-    await updatePostCategory(post.id, newCategory);
-  };
+  })
 
   const [slugErr, setSlugErr] = useState(false)
 
@@ -242,9 +273,9 @@ function Editor({ post }) {
     let toSave = {
       ...clientPost,
       lastEdited: firebase.firestore.Timestamp.now(),
-    };
-    delete toSave.id; // since we get the id from the document not the data
-    await firestore.collection('posts').doc(post.id).set(toSave);
+    }
+    delete toSave.id // since we get the id from the document not the data
+    await firestore.collection('posts').doc(post.id).set(toSave)
   }
 
   useEffect(() => {
@@ -306,23 +337,94 @@ function Editor({ post }) {
         heading: {
           levels: [1, 2, 3],
         },
+        codeBlock: false,
       }),
-      Link,
-      Image,
-      Placeholder,
-      Highlight.configure({ multicolor: true }), // Add the Highlight extension
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: 'tiptap-link',
+        },
+      }),
+      Image.configure({
+        allowBase64: true,
+        HTMLAttributes: {
+          class: 'tiptap-image',
+        },
+      }),
+      Placeholder.configure({
+        placeholder: 'Write your post content here...',
+      }),
+      Underline,
+      CodeBlockLowlight.configure({
+        lowlight,
+      }),
     ],
+    editorProps: {
+      attributes: {
+        class: 'tiptap-editor-content',
+      },
+    },
     onUpdate: ({ editor: newEditor }) => {
       setClientPost(prevPost => ({ ...prevPost, content: newEditor.getHTML() }))
     },
-  });
+  })
 
   function addImage() {
-    const url = window.prompt('URL')
-
-    if (url) {
-      contentEditor.chain().focus().setImage({ src: url }).run()
+    // Create a file input element
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    
+    // Listen for file selection
+    input.onchange = async (event) => {
+      const file = event.target.files[0]
+      if (!file) return
+      
+      // Show loading indicator
+      const loadingEl = document.createElement('div')
+      loadingEl.textContent = 'Uploading image...'
+      loadingEl.style.padding = '1rem'
+      loadingEl.style.background = 'var(--grey-5)'
+      loadingEl.style.borderRadius = '0.5rem'
+      loadingEl.style.position = 'fixed'
+      loadingEl.style.zIndex = '9999'
+      loadingEl.style.top = '1rem'
+      loadingEl.style.right = '1rem'
+      document.body.appendChild(loadingEl)
+      
+      try {
+        // Import the function to avoid module issues
+        const { uploadToImgBB } = await import('../../lib/utils')
+        
+        // Get API key from environment variable
+        // This ensures we're not hardcoding sensitive keys in the source code
+        const apiKey = process.env.NEXT_PUBLIC_IMGBB_API
+        
+        if (!apiKey) {
+          alert('ImgBB API key not configured. Please check your environment variables.')
+          return
+        }
+        
+        // Upload image
+        const imageUrl = await uploadToImgBB(file, apiKey)
+        
+        if (imageUrl) {
+          // Insert the image into the editor
+          contentEditor.chain().focus().setImage({ src: imageUrl }).run()
+        } else {
+          alert('Failed to upload image. Please try again.')
+        }
+      } catch (error) {
+        console.error('Image upload error:', error)
+        alert('Error uploading image. Please try again.')
+      } finally {
+        // Remove loading indicator
+        document.body.removeChild(loadingEl)
+      }
     }
+    
+    // Trigger file selection dialog
+    input.click()
   }
 
   return (
@@ -330,13 +432,9 @@ function Editor({ post }) {
       <Head>
         <title>
           {clientPost.title
-            ? `Editing post: ${clientPost.title} / JusticeRest`
+            ? `Editing post: ${clientPost.title} / Bublr`
             : 'Editing...'}
         </title>
-
-        <link rel="manifest" href="https://www.justice.rest/justicerest.webmanifest" />
-        <meta name="mobile-web-app-capable" content="yes" />
-
         <link
           href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400;1,600&display=swap"
           rel="stylesheet"
@@ -345,8 +443,6 @@ function Editor({ post }) {
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap"
           rel="stylesheet"
         />
-
-<script defer src="https://cloud.umami.is/script.js" data-website-id="a0cdb368-20ae-4630-8949-ac57917e2ae3"></script>
       </Head>
 
       <header
@@ -376,8 +472,7 @@ function Editor({ post }) {
           disabled={
             post.title === clientPost.title &&
             post.content === clientPost.content &&
-            post.excerpt === clientPost.excerpt &&
-            post.category === clientPost.category
+            post.excerpt === clientPost.excerpt
           }
           onClick={saveChanges}
         >
@@ -418,7 +513,6 @@ function Editor({ post }) {
                 margin: 1.5rem 0;
               `}
             >
-              {/* Slug Is Seen Here */}
               <form>
                 <label
                   htmlFor="post-slug"
@@ -489,39 +583,10 @@ function Editor({ post }) {
                       setSlugErr(false)
                     }}
                   >
-                    ✔
+                    <CheckIcon />
                   </IconButton>
                 </div>
               </form>
-            </div>
-
-            <div>
-              <StyledLabel htmlFor="profile-category">Category</StyledLabel>
-              <select
-                css={css`
-                  text-transform: none;
-                  display: block;
-                  width: 17em;
-                  padding: 0.75em 1.5em;
-                  background: none;
-                  border: 1px solid var(--grey-2);
-                  outline: none;
-                  border-radius: 0.5rem;
-                  color: inherit;
-                  margin-bottom: 1.5em;
-                  background-color: var(--grey-1)
-                `}
-                id="profile-category"
-                value={clientPost.category}
-                onChange={handleCategoryChange}
-              >
-                <option value="">Type of Concern</option>
-                <option value="Social">Social</option>
-                <option value="Economic">Economic</option>
-                <option value="Political">Political</option>
-                <option value="Corporate">Corporate</option>
-                <option value="Others">Others</option>
-              </select>
             </div>
 
             <div
@@ -585,7 +650,7 @@ function Editor({ post }) {
                   rel="noreferrer"
                   href={`/${userdata.name}/${post.slug}`}
                 >
-                  justice.rest/{userdata.name}/{post.slug}
+                  bublr.life/{userdata.name}/{post.slug}
                 </a>
               </p>
             ) : (
@@ -647,6 +712,60 @@ function Editor({ post }) {
           }
 
           margin-bottom: 5rem;
+          
+          .tiptap-editor-content {
+            min-height: 300px;
+            transition: all 0.2s ease;
+          }
+          
+          .tiptap-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.25rem;
+            display: block;
+            margin: 1.5rem 0;
+          }
+          
+          .tiptap-link {
+            color: #3182ce;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(49, 130, 206, 0.3);
+            transition: border-bottom 0.2s ease;
+          }
+          
+          .tiptap-link:hover {
+            border-bottom: 1px solid rgba(49, 130, 206, 0.8);
+          }
+          
+          pre {
+            background-color: #2d2d2d;
+            border-radius: 0.5rem;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 0.75rem 1rem;
+            overflow-x: auto;
+          }
+          
+          pre code {
+            color: inherit;
+            padding: 0;
+            background: none;
+            font-size: 0.9em;
+          }
+          
+          code {
+            background-color: rgba(0, 0, 0, 0.05);
+            border-radius: 0.25rem;
+            color: #24292e;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            padding: 0.2em 0.4em;
+          }
+          
+          html[data-theme='dark'] code {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #e1e1e1;
+          }
         `}
       >
         {contentEditor && <SelectionMenu editor={contentEditor} />}
