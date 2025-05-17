@@ -6,7 +6,7 @@ const Header = props => (
     css={css`
       display: flex;
       margin-bottom: 5rem;
-      justify-content: flex-end;
+      justify-content: space-evenly;
 
       a {
         display: block;
