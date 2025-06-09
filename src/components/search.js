@@ -32,10 +32,12 @@ export default function Search(props) {
 
   useEffect(() => {
     if (props.isGlobalSearch) {
-      // Add debounce for global search as well
+      // Add debounce for global search
       const delayDebounceFn = setTimeout(() => {
-        // Search even when empty to show recent posts
-        props.getSearchInput(searchInput);
+        // Only trigger search if there's input or if we explicitly cleared the input
+        if (searchInput.trim().length > 0 || searchInput === '') {
+          props.getSearchInput(searchInput);
+        }
       }, 500)
       
       return () => clearTimeout(delayDebounceFn)

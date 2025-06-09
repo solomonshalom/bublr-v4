@@ -37,10 +37,10 @@ export default function Explore() {
 
   // Load initial posts on component mount
   useEffect(() => {
-    if (user && !hasSearched) {
+    if (user) {
       loadInitialPosts();
     }
-  }, [user, hasSearched]);
+  }, [user]);
 
   const loadInitialPosts = async () => {
     setIsSearchLoading(true);
@@ -48,6 +48,7 @@ export default function Explore() {
       const posts = await searchPosts(''); // Empty search returns recent posts
       const postsWithAuthors = await setPostAuthorProfilePics(posts);
       setExplorePosts(postsWithAuthors);
+      setHasSearched(false); // Reset hasSearched to false after loading initial posts
     } catch (error) {
       console.error('Error loading initial posts:', error);
     } finally {

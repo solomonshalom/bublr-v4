@@ -145,94 +145,180 @@ export const searchPosts = async (searchInput, limit = 20) => {
     .filter(term => term.length > 2);
   
   if (searchTerms.length === 0) {
-    return [];
-  }
-  
-  try {
-    // First attempt: Try to find posts that exactly match the title
-    const titleSnapshot = await firestore
-      .collection('posts')
-      .where('published', '==', true)
-      .where('title', '==', originalInput)
-      .limit(limit)
-      .get();
-    
-    if (!titleSnapshot.empty) {
-      return titleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    }
-    
-    // Generate fuzzy search terms
-    const fuzzySearchTerms = [];
-    
-    // Add original terms
-    searchTerms.forEach(term => {
-      fuzzySearchTerms.push(term);
-      
-      // Add prefixes for partial matching (if term length > 4)
-      if (term.length > 4) {
-        fuzzySearchTerms.push(term.substring(0, Math.ceil(term.length * 0.75)));
-        fuzzySearchTerms.push(term.substring(0, Math.ceil(term.length * 0.5)));
-      }
-      
-      // Common vowel substitutions
-      if (term.includes('a')) fuzzySearchTerms.push(term.replace(/a/g, 'e'));
-      if (term.includes('e')) fuzzySearchTerms.push(term.replace(/e/g, 'a'));
-      if (term.includes('i')) fuzzySearchTerms.push(term.replace(/i/g, 'y'));
-    });
-    
-    // Keep unique terms and limit to 20 for Firestore
-    const uniqueFuzzyTerms = [...new Set(fuzzySearchTerms)].slice(0, 20);
-    
-    // Second attempt: Search by terms in searchQueries array with fuzzy terms
+    // If no valid search terms after processing, return recent posts
     const snapshot = await firestore
       .collection('posts')
       .where('published', '==', true)
-      .where('searchQueries', 'array-contains-any', uniqueFuzzyTerms)
+      .orderBy('createdAt', 'desc')
       .limit(limit)
       .get();
     
-    let results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+  
+  try {
+    // Collect all posts to apply client-side fuzzy search
+    const allPublishedSnapshot = await firestore
+      .collection('posts')
+      .where('published', '==', true)
+      .limit(limit * 2) // Get more posts to ensure we have enough after filtering
+      .get();
     
-    // Apply additional client-side fuzzy matching and sort by relevance
-    // Higher score = better match
-    results = results.map(post => {
+    let allPosts = allPublishedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // Apply fuzzy search with scoring
+    const scoredPosts = allPosts.map(post => {
       let score = 0;
+      const postTitle = post.title ? post.title.toLowerCase() : '';
+      const postContent = post.content ? post.content.toLowerCase() : '';
+      const postExcerpt = post.excerpt ? post.excerpt.toLowerCase() : '';
       
       // Exact title match gets highest score
-      if (post.title && post.title.toLowerCase() === originalInput.toLowerCase()) {
+      if (postTitle === originalInput.toLowerCase()) {
         score += 100;
       }
       
-      // Title contains search term
-      if (post.title && searchTerms.some(term => post.title.toLowerCase().includes(term))) {
-        score += 50;
+      // Title contains full search query
+      if (postTitle.includes(originalInput.toLowerCase())) {
+        score += 75;
       }
       
-      // Content contains search term
-      if (post.content && searchTerms.some(term => post.content.toLowerCase().includes(term))) {
-        score += 25;
+      // Check for individual terms in title (highest priority)
+      for (const term of searchTerms) {
+        if (postTitle.includes(term)) {
+          score += 50;
+        }
+        
+        // Partial matching in title
+        if (term.length > 3) {
+          const partialMatchScore = calculatePartialMatchScore(postTitle, term);
+          score += partialMatchScore * 20; // Higher weight for title matches
+        }
       }
       
-      // Count how many search terms are found in the post's searchQueries
-      const matchCount = searchTerms.filter(term => 
-        post.searchQueries && post.searchQueries.includes(term)
-      ).length;
+      // Check for terms in excerpt
+      for (const term of searchTerms) {
+        if (postExcerpt.includes(term)) {
+          score += 30;
+        }
+        
+        // Partial matching in excerpt
+        if (term.length > 3) {
+          const partialMatchScore = calculatePartialMatchScore(postExcerpt, term);
+          score += partialMatchScore * 10;
+        }
+      }
       
-      score += matchCount * 10;
+      // Check for terms in content
+      for (const term of searchTerms) {
+        if (postContent.includes(term)) {
+          score += 20;
+        }
+        
+        // Partial matching in content
+        if (term.length > 3) {
+          const partialMatchScore = calculatePartialMatchScore(postContent, term);
+          score += partialMatchScore * 5;
+        }
+      }
+      
+      // Use searchQueries if available (for backward compatibility)
+      if (post.searchQueries && Array.isArray(post.searchQueries)) {
+        for (const term of searchTerms) {
+          if (post.searchQueries.includes(term)) {
+            score += 15;
+          }
+        }
+      }
       
       return { ...post, _score: score };
     });
     
-    // Sort by relevance score (descending)
-    results.sort((a, b) => b._score - a._score);
+    // Filter out posts with zero score
+    const matchedPosts = scoredPosts.filter(post => post._score > 0);
     
-    // Remove the temporary score field
-    return results.map(({ _score, ...post }) => post);
+    // Sort by score (descending)
+    matchedPosts.sort((a, b) => b._score - a._score);
+    
+    // Return top results up to limit
+    return matchedPosts
+      .slice(0, limit)
+      .map(({ _score, ...post }) => post);
   } catch (error) {
     console.error('Error searching posts:', error);
     return [];
   }
 };
+
+// Helper function to calculate partial match score
+function calculatePartialMatchScore(text, term) {
+  if (!text || !term) return 0;
+  
+  // Check for partial matches at word boundaries
+  const words = text.split(/\s+/);
+  for (const word of words) {
+    // Word starts with the term
+    if (word.startsWith(term)) return 0.9;
+    
+    // Term starts with the word
+    if (term.startsWith(word) && word.length >= 3) return 0.8;
+    
+    // Contains at least 70% of the term (for longer terms)
+    if (term.length >= 5) {
+      const neededChars = Math.ceil(term.length * 0.7);
+      for (let i = 0; i <= word.length - neededChars; i++) {
+        const subWord = word.substring(i, i + neededChars);
+        if (term.includes(subWord)) return 0.7;
+      }
+    }
+  }
+  
+  // More flexible fuzzy matching for title
+  const maxErrors = Math.floor(term.length / 3);
+  if (maxErrors >= 1) {
+    // Simple Levenshtein distance for fuzzy matching
+    for (const word of words) {
+      if (word.length >= term.length - maxErrors && 
+          word.length <= term.length + maxErrors) {
+        if (getEditDistance(word, term) <= maxErrors) {
+          return 0.6;
+        }
+      }
+    }
+  }
+  
+  return 0;
+}
+
+// Simple Levenshtein distance implementation for fuzzy matching
+function getEditDistance(str1, str2) {
+  const m = str1.length;
+  const n = str2.length;
+  
+  // Create a matrix of size (m+1) x (n+1)
+  const dp = Array(m + 1).fill().map(() => Array(n + 1).fill(0));
+  
+  // Fill the first row and column
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  
+  // Fill the rest of the matrix
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = 1 + Math.min(
+          dp[i - 1][j],     // deletion
+          dp[i][j - 1],     // insertion
+          dp[i - 1][j - 1]  // substitution
+        );
+      }
+    }
+  }
+  
+  return dp[m][n];
+}
 
 
 export async function userWithIDExists(id) {
