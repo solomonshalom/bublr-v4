@@ -9,7 +9,7 @@ import { useAuthState } from 'react-firebase-hooks/auth'
 import { useCollectionData } from 'react-firebase-hooks/firestore'
 import { collection, query, where, getDocs } from "firebase/firestore";
 
-import { createPostForUser, filterExplorePosts } from '../../lib/db'
+import { createPostForUser } from '../../lib/db'
 import { firestore, auth } from '../../lib/firebase'
 
 import Button from '../../components/button'
@@ -33,6 +33,7 @@ export default function Explore() {
     .limit(15),{ idField: 'id' },
   )
   const [explorePosts, setExplorePosts] = useState([]);
+  const [allPostsWithAuthors, setAllPostsWithAuthors] = useState([]);
 
   useEffect(() => {
     console.log(user, userLoading, userError)
@@ -47,6 +48,7 @@ export default function Explore() {
     (async () => {
         let posts = await setPostAuthorProfilePics(initPosts);
         setExplorePosts(posts);
+        setAllPostsWithAuthors(posts); // Store all posts for filtering
     })()
   }, [initPosts])
 
@@ -65,16 +67,38 @@ export default function Explore() {
     return posts
   }
 
-  // Get the searchInput from Search component and do the global search on db
+  // Client-side search function
   const getFilteredExplorePosts = async (searchInput) => {
-    let filteredExplorePosts = await filterExplorePosts(searchInput);
-    filteredExplorePosts = await setPostAuthorProfilePics(filteredExplorePosts);
-    setExplorePosts(filteredExplorePosts)
-    return filteredExplorePosts;
+    if (!searchInput || searchInput.trim() === '') {
+      // If search is empty, show all posts
+      setExplorePosts(allPostsWithAuthors);
+      return allPostsWithAuthors;
+    }
+    
+    // Filter posts based on search input
+    const searchTerm = searchInput.toLowerCase();
+    const filtered = allPostsWithAuthors.filter(post => {
+      // Search in title
+      const titleMatch = post.title && post.title.toLowerCase().includes(searchTerm);
+      
+      // Search in content (convert HTML to text first)
+      const contentMatch = post.content && 
+        htmlToText(post.content).toLowerCase().includes(searchTerm);
+      
+      // Search in excerpt
+      const excerptMatch = post.excerpt && 
+        htmlToText(post.excerpt).toLowerCase().includes(searchTerm);
+      
+      // Search in author name
+      const authorMatch = post.author && post.author.displayName && 
+        post.author.displayName.toLowerCase().includes(searchTerm);
+      
+      return titleMatch || contentMatch || excerptMatch || authorMatch;
+    });
+    
+    setExplorePosts(filtered);
+    return filtered;
   }
-
-  // FIXED: Remove the undefined getFilteredPosts function since it's not needed
-  // The Search component can directly use getFilteredExplorePosts
 
   return (
     <>
@@ -159,7 +183,6 @@ export default function Explore() {
             posts={explorePosts}
             isGlobalSearch={true}
             getSearchInput={getFilteredExplorePosts}
-            // FIXED: Remove getFilteredPosts prop since it's not defined
             css={css`
               margin-left: 0em
             `}
