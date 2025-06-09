@@ -42,6 +42,70 @@ export async function getAllUsersWithPublishedPosts() {
   return users
 }
 
+export const createPostWithSearch = async (postData) => {
+  const searchQueries = generateSearchQueries(postData);
+  
+  const postWithSearch = {
+    ...postData,
+    searchQueries,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+  
+  const docRef = await firestore.collection('posts').add(postWithSearch);
+  return docRef.id;
+};
+
+export const updatePostWithSearch = async (postId, postData) => {
+  const searchQueries = generateSearchQueries(postData);
+  
+  const updateData = {
+    ...postData,
+    searchQueries,
+    updatedAt: Date.now(),
+  };
+  
+  await firestore.collection('posts').doc(postId).update(updateData);
+};
+
+export const searchPosts = async (searchInput, limit = 20) => {
+  if (!searchInput || searchInput.trim() === '') {
+    // Return recent published posts if no search term
+    const snapshot = await firestore
+      .collection('posts')
+      .where('published', '==', true)
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .get();
+    
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+  
+  // Process search input
+  const searchTerms = searchInput
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '')
+    .split(/\s+/)
+    .filter(term => term.length > 2)
+    .slice(0, 20); // Firebase limit is 30, using 20 to be safe
+  
+  if (searchTerms.length === 0) {
+    return [];
+  }
+  
+  // Query with array-contains-any
+  const snapshot = await firestore
+    .collection('posts')
+    .where('published', '==', true)
+    .where('searchQueries', 'array-contains-any', searchTerms)
+    .limit(limit)
+    .get();
+  
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+
 export async function userWithIDExists(id) {
   const doc = await firestore.collection('users').doc(id).get()
   return doc.exists

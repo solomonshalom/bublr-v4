@@ -1,3 +1,46 @@
+// Add this to your lib/utils.js or create a new file
+export const generateSearchQueries = (post) => {
+  const queries = [];
+  
+  // Add title words
+  if (post.title) {
+    const titleWords = post.title
+      .trim()
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '') // remove punctuation
+      .split(/\s+/)
+      .filter(word => word.length > 2); // ignore words shorter than 3 chars
+    queries.push(...titleWords);
+  }
+  
+  // Add excerpt words
+  if (post.excerpt) {
+    const excerptWords = post.excerpt
+      .trim()
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 2);
+    queries.push(...excerptWords);
+  }
+  
+  // Add content words (first 100 words to avoid too many tokens)
+  if (post.content) {
+    const contentText = post.content
+      .replace(/<[^>]*>/g, '') // remove HTML tags
+      .trim()
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 2)
+      .slice(0, 100); // limit to first 100 words
+    queries.push(...contentText);
+  }
+  
+  // Remove duplicates and return
+  return [...new Set(queries)];
+};
+
 export function formatDate(date) {
   const options = { year: 'numeric', month: 'long', day: 'numeric' }
   return new Date(date).toLocaleDateString('en-US', options)
