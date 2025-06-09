@@ -25,7 +25,6 @@ export default function Search(props) {
   const handleKeyDown = (event) => {
     if (props.isGlobalSearch) {
       if (event.key === 'Enter') {
-        console.log('do validate')
         props.getSearchInput(searchInput);
       }
     }
