@@ -68,6 +68,25 @@ export const updatePostWithSearch = async (postId, postData) => {
   await firestore.collection('posts').doc(postId).update(updateData);
 };
 
+export const generateSearchQueries = (postData) => {
+  // Extract text from title and content
+  const title = postData.title || '';
+  const content = postData.content || '';
+  const excerpt = postData.excerpt || '';
+  
+  // Combine all text for tokenization
+  const fullText = `${title} ${excerpt} ${content}`.toLowerCase();
+  
+  // Tokenize and filter for unique terms
+  const terms = fullText
+    .replace(/[^\w\s]/g, '') // Remove special chars
+    .split(/\s+/) // Split by whitespace
+    .filter(term => term.length > 2) // Only terms with 3+ chars
+    .filter((term, i, arr) => arr.indexOf(term) === i); // Unique terms
+  
+  return terms.slice(0, 30); // Firebase limit is 30 values in array-contains-any
+};
+
 export const searchPosts = async (searchInput, limit = 20) => {
   if (!searchInput || searchInput.trim() === '') {
     // Return recent published posts if no search term

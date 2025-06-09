@@ -35,9 +35,8 @@ export default function Search(props) {
     if (props.isGlobalSearch) {
       // Add debounce for global search as well
       const delayDebounceFn = setTimeout(() => {
-        if (searchInput.trim().length > 0) {
-          props.getSearchInput(searchInput);
-        }
+        // Search even when empty to show recent posts
+        props.getSearchInput(searchInput);
       }, 500)
       
       return () => clearTimeout(delayDebounceFn)
