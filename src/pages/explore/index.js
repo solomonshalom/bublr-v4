@@ -179,60 +179,62 @@ export default function Explore() {
         >
           {explorePosts.map(post => (
             <li key={post.id}>
-              {/* FIXED: Remove nested <a> tag - Next.js Link handles this automatically */}
-              <Link 
-                href={`/${post.author.name}/${post.slug}`}
-                css={css`
-                  text-decoration: none; 
-                  color: inherit;
-                  display: block;
-                `}
-              >
-                <h3
-                  css={css`
-                    font-size: 1rem;
-                    font-weight: 400;
-                    margin-bottom: 0.6rem;
-                    text-decoration: none;
-                  `}
-                >
-                  {post.title ? htmlToText(post.title) : 'Untitled'}
-                </h3>
-
+              {/* FIXED: Wrap content in a single div to satisfy React.Children.only */}
+              <Link href={`/${post.author.name}/${post.slug}`}>
                 <div
                   css={css`
-                    display: flex;
-                    align-items: center;
-                    color: var(--grey-3);
-                    font-size: 0.9rem;
-                    text-decoration: none;
+                    text-decoration: none; 
+                    color: inherit;
+                    display: block;
+                    cursor: pointer;
                   `}
                 >
-                  <img
-                    src={post.author.photo}
-                    alt="Profile picture"
+                  <h3
                     css={css`
-                      width: 1.5rem;
-                      border-radius: 1rem;
-                      margin-right: 0.75rem;
+                      font-size: 1rem;
+                      font-weight: 400;
+                      margin-bottom: 0.6rem;
+                      text-decoration: none;
                     `}
-                  />
-                  <p style={{textDecoration: 'none', color: 'inherit'}}>{post.author.displayName}</p>
-                </div>
+                  >
+                    {post.title ? htmlToText(post.title) : 'Untitled'}
+                  </h3>
 
-                <p
-                  css={css`
-                    color: var(--grey-4);
-                    font-family: 'Newsreader', serif;
-                    line-height: 1.5em;
-                    margin-top: 0.5rem;
-                    text-decoration: none;
-                  `}
-                >
-                  {post.excerpt
-                    ? htmlToText(post.excerpt)
-                    : truncate(htmlToText(post.content), 25)}
-                </p>
+                  <div
+                    css={css`
+                      display: flex;
+                      align-items: center;
+                      color: var(--grey-3);
+                      font-size: 0.9rem;
+                      text-decoration: none;
+                    `}
+                  >
+                    <img
+                      src={post.author.photo}
+                      alt="Profile picture"
+                      css={css`
+                        width: 1.5rem;
+                        border-radius: 1rem;
+                        margin-right: 0.75rem;
+                      `}
+                    />
+                    <p style={{textDecoration: 'none', color: 'inherit'}}>{post.author.displayName}</p>
+                  </div>
+
+                  <p
+                    css={css`
+                      color: var(--grey-4);
+                      font-family: 'Newsreader', serif;
+                      line-height: 1.5em;
+                      margin-top: 0.5rem;
+                      text-decoration: none;
+                    `}
+                  >
+                    {post.excerpt
+                      ? htmlToText(post.excerpt)
+                      : truncate(htmlToText(post.content), 25)}
+                  </p>
+                </div>
               </Link>
             </li>
           ))}
