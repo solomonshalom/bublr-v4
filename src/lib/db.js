@@ -84,7 +84,41 @@ export const generateSearchQueries = (postData) => {
     .filter(term => term.length > 2) // Only terms with 3+ chars
     .filter((term, i, arr) => arr.indexOf(term) === i); // Unique terms
   
-  return terms.slice(0, 30); // Firebase limit is 30 values in array-contains-any
+  // Generate phonetic variants and common prefixes for fuzzy matching
+  const fuzzyTerms = [];
+  terms.forEach(term => {
+    // Add the original term
+    fuzzyTerms.push(term);
+    
+    // Add term prefixes for partial matching (if term length > 4)
+    if (term.length > 4) {
+      // Add prefixes of different lengths (minimum 3 chars)
+      for (let i = 3; i < term.length; i++) {
+        fuzzyTerms.push(term.substring(0, i));
+      }
+    }
+    
+    // Add common misspelling patterns
+    // Double letter to single letter
+    if (/(.)\1/.test(term)) {
+      fuzzyTerms.push(term.replace(/(.)\1+/g, '$1'));
+    }
+    
+    // Single letter to double letter for common doubled letters
+    ['l', 'r', 's', 't', 'p', 'n', 'm'].forEach(letter => {
+      if (term.includes(letter)) {
+        fuzzyTerms.push(term.replace(letter, letter + letter));
+      }
+    });
+    
+    // Common vowel substitutions
+    if (term.includes('a')) fuzzyTerms.push(term.replace(/a/g, 'e'));
+    if (term.includes('e')) fuzzyTerms.push(term.replace(/e/g, 'a'));
+    if (term.includes('i')) fuzzyTerms.push(term.replace(/i/g, 'y'));
+  });
+  
+  // Filter again for uniqueness and limit to 30 terms
+  return [...new Set(fuzzyTerms)].slice(0, 30); // Firebase limit is 30 values in array-contains-any
 };
 
 export const searchPosts = async (searchInput, limit = 20) => {
@@ -100,28 +134,104 @@ export const searchPosts = async (searchInput, limit = 20) => {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
   
+  const originalInput = searchInput.trim();
+  
   // Process search input
   const searchTerms = searchInput
     .trim()
     .toLowerCase()
     .replace(/[^\w\s]/g, '')
     .split(/\s+/)
-    .filter(term => term.length > 2)
-    .slice(0, 20); // Firebase limit is 30, using 20 to be safe
+    .filter(term => term.length > 2);
   
   if (searchTerms.length === 0) {
     return [];
   }
   
-  // Query with array-contains-any
-  const snapshot = await firestore
-    .collection('posts')
-    .where('published', '==', true)
-    .where('searchQueries', 'array-contains-any', searchTerms)
-    .limit(limit)
-    .get();
-  
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  try {
+    // First attempt: Try to find posts that exactly match the title
+    const titleSnapshot = await firestore
+      .collection('posts')
+      .where('published', '==', true)
+      .where('title', '==', originalInput)
+      .limit(limit)
+      .get();
+    
+    if (!titleSnapshot.empty) {
+      return titleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+    
+    // Generate fuzzy search terms
+    const fuzzySearchTerms = [];
+    
+    // Add original terms
+    searchTerms.forEach(term => {
+      fuzzySearchTerms.push(term);
+      
+      // Add prefixes for partial matching (if term length > 4)
+      if (term.length > 4) {
+        fuzzySearchTerms.push(term.substring(0, Math.ceil(term.length * 0.75)));
+        fuzzySearchTerms.push(term.substring(0, Math.ceil(term.length * 0.5)));
+      }
+      
+      // Common vowel substitutions
+      if (term.includes('a')) fuzzySearchTerms.push(term.replace(/a/g, 'e'));
+      if (term.includes('e')) fuzzySearchTerms.push(term.replace(/e/g, 'a'));
+      if (term.includes('i')) fuzzySearchTerms.push(term.replace(/i/g, 'y'));
+    });
+    
+    // Keep unique terms and limit to 20 for Firestore
+    const uniqueFuzzyTerms = [...new Set(fuzzySearchTerms)].slice(0, 20);
+    
+    // Second attempt: Search by terms in searchQueries array with fuzzy terms
+    const snapshot = await firestore
+      .collection('posts')
+      .where('published', '==', true)
+      .where('searchQueries', 'array-contains-any', uniqueFuzzyTerms)
+      .limit(limit)
+      .get();
+    
+    let results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // Apply additional client-side fuzzy matching and sort by relevance
+    // Higher score = better match
+    results = results.map(post => {
+      let score = 0;
+      
+      // Exact title match gets highest score
+      if (post.title && post.title.toLowerCase() === originalInput.toLowerCase()) {
+        score += 100;
+      }
+      
+      // Title contains search term
+      if (post.title && searchTerms.some(term => post.title.toLowerCase().includes(term))) {
+        score += 50;
+      }
+      
+      // Content contains search term
+      if (post.content && searchTerms.some(term => post.content.toLowerCase().includes(term))) {
+        score += 25;
+      }
+      
+      // Count how many search terms are found in the post's searchQueries
+      const matchCount = searchTerms.filter(term => 
+        post.searchQueries && post.searchQueries.includes(term)
+      ).length;
+      
+      score += matchCount * 10;
+      
+      return { ...post, _score: score };
+    });
+    
+    // Sort by relevance score (descending)
+    results.sort((a, b) => b._score - a._score);
+    
+    // Remove the temporary score field
+    return results.map(({ _score, ...post }) => post);
+  } catch (error) {
+    console.error('Error searching posts:', error);
+    return [];
+  }
 };
 
 
