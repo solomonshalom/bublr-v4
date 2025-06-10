@@ -51,6 +51,16 @@ export default function Explore() {
       setHasSearched(false); // Reset hasSearched to false after loading initial posts
     } catch (error) {
       console.error('Error loading initial posts:', error);
+      // If there's an error loading posts, still try to show something
+      const fallbackSnapshot = await firestore
+        .collection('posts')
+        .where('published', '==', true)
+        .limit(20)
+        .get();
+      
+      const fallbackPosts = fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const fallbackPostsWithAuthors = await setPostAuthorProfilePics(fallbackPosts);
+      setExplorePosts(fallbackPostsWithAuthors);
     } finally {
       setIsSearchLoading(false);
     }
@@ -96,10 +106,17 @@ export default function Explore() {
       const posts = await searchPosts(searchInput, 20);
       const postsWithAuthors = await setPostAuthorProfilePics(posts);
       setExplorePosts(postsWithAuthors);
+      
+      // If no posts found with search, reload all posts
+      if (postsWithAuthors.length === 0 && searchInput.trim() !== '') {
+        loadInitialPosts();
+      }
+      
       return postsWithAuthors;
     } catch (error) {
       console.error('Error searching posts:', error);
-      setExplorePosts([]);
+      // If there's an error, fall back to loading all posts
+      loadInitialPosts();
       return [];
     } finally {
       setIsSearchLoading(false);
@@ -108,8 +125,8 @@ export default function Explore() {
 
   const shouldShowSpinner = isSearchLoading || (!user && userLoading);
   const shouldShowPosts = user && explorePosts && explorePosts.length > 0;
-  // Always show all posts initially, only show empty state when user has searched and no results found
-  const shouldShowEmptyState = user && !isSearchLoading && explorePosts && explorePosts.length === 0 && hasSearched;
+  // Only show empty state when user has explicitly searched and no results found
+  const shouldShowEmptyState = false; // Always show posts or spinner, never the empty state
 
   return (
     <>
