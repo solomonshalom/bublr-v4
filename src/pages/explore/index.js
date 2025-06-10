@@ -108,6 +108,7 @@ export default function Explore() {
 
   const shouldShowSpinner = isSearchLoading || (!user && userLoading);
   const shouldShowPosts = user && explorePosts && explorePosts.length > 0;
+  // Always show all posts initially, only show empty state when user has searched and no results found
   const shouldShowEmptyState = user && !isSearchLoading && explorePosts && explorePosts.length === 0 && hasSearched;
 
   return (
