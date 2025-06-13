@@ -252,6 +252,14 @@ const PeepWalk = ({ height = '100%', width = '100%' }) => {
       css={css`
         width: ${width};
         height: ${height};
+        
+        @media (max-width: 768px) {
+          height: 300px;
+        }
+        
+        @media (max-width: 480px) {
+          height: 200px;
+        }
       `}
     />
   );

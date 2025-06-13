@@ -175,6 +175,14 @@ export default function Home() {
           left: 0;
           right: 0;
           z-index: -1;
+          
+          @media (max-width: 768px) {
+            bottom: -150px;
+          }
+          
+          @media (max-width: 480px) {
+            bottom: -100px;
+          }
         `}
       >
         <PeepWalk height="450px" width="100%" />
