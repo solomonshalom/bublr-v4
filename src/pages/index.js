@@ -46,7 +46,7 @@ export default function Home() {
           margin-bottom: 2.5rem;
 
           @media (max-width: 720px) {
-            margin-bottom: 10rem;
+            margin-bottom: 2rem;
           }
 
           width: 2rem;
