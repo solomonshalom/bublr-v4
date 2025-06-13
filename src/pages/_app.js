@@ -50,6 +50,11 @@ const App = ({ Component, pageProps }) => {
             --grey-2: #2e2e2e;
             --grey-4: #c7c7c7;
             --grey-5: #fcfcfc;
+            --mainColor: #fcfcfc;
+          }
+
+          [data-theme='light'] {
+            --mainColor: #275EFE;
           }
 
           *,
@@ -83,6 +88,23 @@ const App = ({ Component, pageProps }) => {
             html {
               font-size: 90%;
             }
+          }
+
+          a {
+            background: linear-gradient(to bottom, var(--mainColor) 0%, var(--mainColor) 100%);
+            background-position: 0 100%;
+            background-repeat: repeat-x;
+            background-size: 3px 3px;
+            color: #000;
+            text-decoration: none;
+          }
+
+          a:hover {
+            background-image: url("data:image/svg+xml;charset=utf8,%3Csvg id='squiggle-link' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:ev='http://www.w3.org/2001/xml-events' viewBox='0 0 20 4'%3E%3Cstyle type='text/css'%3E.squiggle{animation:shift .3s linear infinite;}@keyframes shift {from {transform:translateX(0);}to {transform:translateX(-20px);}}%3C/style%3E%3Cpath fill='none' stroke='%23ff9800' stroke-width='2' class='squiggle' d='M0,3.5 c 5,0,5,-3,10,-3 s 5,3,10,3 c 5,0,5,-3,10,-3 s 5,3,10,3'/%3E%3C/svg%3E");
+            background-position: 0 100%;
+            background-size: auto 6px;
+            background-repeat: repeat-x;
+            text-decoration: none;
           }
 
           // Proesemirror
