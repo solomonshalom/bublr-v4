@@ -40,6 +40,9 @@ const App = ({ Component, pageProps }) => {
             --grey-3: #6f6f6f;
             --grey-4: #2e2e2e;
             --grey-5: #171717;
+            --text: #2B3044;
+            --line: #BBC1E1;
+            --line-active: #275EFE;
           }
 
           [data-theme='dark'] {
