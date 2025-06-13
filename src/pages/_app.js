@@ -91,21 +91,34 @@ const App = ({ Component, pageProps }) => {
           }
 
           a {
-            background: linear-gradient(to bottom, var(--mainColor) 0%, var(--mainColor) 100%);
-            background-position: 0 100%;
-            background-repeat: repeat-x;
-            background-size: 3px 3px;
-            color: #000;
-            text-decoration: none;
-          }
-
-          a:hover {
-            background-image: url("data:image/svg+xml;charset=utf8,%3Csvg id='squiggle-link' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:ev='http://www.w3.org/2001/xml-events' viewBox='0 0 20 4'%3E%3Cstyle type='text/css'%3E.squiggle{animation:shift .3s linear infinite;}@keyframes shift {from {transform:translateX(0);}to {transform:translateX(-20px);}}%3C/style%3E%3Cpath fill='none' stroke='%23ff9800' stroke-width='2' class='squiggle' d='M0,3.5 c 5,0,5,-3,10,-3 s 5,3,10,3 c 5,0,5,-3,10,-3 s 5,3,10,3'/%3E%3C/svg%3E");
-            background-position: 0 100%;
-            background-size: auto 6px;
-            background-repeat: repeat-x;
-            text-decoration: none;
-          }
+        display: inline-block;
+        position: relative;
+        text-decoration: none;
+        color: inherit;
+        margin: 0 var(--spacing, 0px);
+        transition: margin .25s;
+        svg {
+            width: 76px;
+            height: 40px;
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            transform: translate(-50%, 7px) translateZ(0);
+            fill: none;
+            stroke: var(--stroke, var(--line));
+            stroke-linecap: round;
+            stroke-width: 2px;
+            stroke-dasharray: var(--offset, 69px) 278px;
+            stroke-dashoffset: 361px;
+            transition: stroke .25s ease var(--stroke-delay, 0s), stroke-dasharray .35s;
+        }
+        &:hover {
+            --spacing: 4px;
+            --stroke: var(--line-active);
+            --stroke-delay: .1s;
+            --offset: 180px;
+        }
+    }
 
           // Proesemirror
           .ProseMirror-focused {
