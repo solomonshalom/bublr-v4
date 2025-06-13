@@ -50,11 +50,6 @@ const App = ({ Component, pageProps }) => {
             --grey-2: #2e2e2e;
             --grey-4: #c7c7c7;
             --grey-5: #fcfcfc;
-            --mainColor: #fcfcfc;
-          }
-
-          [data-theme='light'] {
-            --mainColor: #275EFE;
           }
 
           *,
@@ -89,36 +84,6 @@ const App = ({ Component, pageProps }) => {
               font-size: 90%;
             }
           }
-
-          a {
-        display: inline-block;
-        position: relative;
-        text-decoration: none;
-        color: inherit;
-        margin: 0 var(--spacing, 0px);
-        transition: margin .25s;
-        svg {
-            width: 76px;
-            height: 40px;
-            position: absolute;
-            left: 50%;
-            bottom: 0;
-            transform: translate(-50%, 7px) translateZ(0);
-            fill: none;
-            stroke: var(--stroke, var(--line));
-            stroke-linecap: round;
-            stroke-width: 2px;
-            stroke-dasharray: var(--offset, 69px) 278px;
-            stroke-dashoffset: 361px;
-            transition: stroke .25s ease var(--stroke-delay, 0s), stroke-dasharray .35s;
-        }
-        &:hover {
-            --spacing: 4px;
-            --stroke: var(--line-active);
-            --stroke-delay: .1s;
-            --offset: 180px;
-        }
-    }
 
           // Proesemirror
           .ProseMirror-focused {
