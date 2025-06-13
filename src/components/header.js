@@ -88,5 +88,5 @@ const Header = props => {
     {props.children}
   </header>
 )
-
+}
 export default Header;

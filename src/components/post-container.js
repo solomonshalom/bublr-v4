@@ -154,5 +154,5 @@ const PostContainer = props => {
     {props.children}
   </div>
 )
-
+}
 export default PostContainer;
