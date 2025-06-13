@@ -75,25 +75,39 @@ export default function Profile({ user }) {
             rel="noreferrer"
             css={css`
               display: inline-block;
-          position: relative;
-          background: linear-gradient(to bottom, var(--mainColor) 0%, var(--mainColor) 100%);
-	        background-position: 0 100%;
-	        background-repeat: repeat-x;
-	        background-size: 3px 3px;
-          color: #000;
-          text-decoration: none;
+        position: relative;
+        text-decoration: none;
+        color: inherit;
+        margin: 0 var(--spacing, 0px);
+        transition: margin .25s;
+        svg {
+            width: 250%;
+            height: 250%;
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            transform: translate(-50%, 7px) translateZ(0);
+            fill: none;
+            stroke: var(--stroke, var(--line));
+            stroke-linecap: round;
+            stroke-width: 2px;
+            stroke-dasharray: var(--offset, 69px) 278px;
+            stroke-dashoffset: 361px;
+            transition: stroke .25s ease var(--stroke-delay, 0s), stroke-dasharray .35s;
         }
         &:hover {
-            background-image: url("data:image/svg+xml;charset=utf8,%3Csvg id='squiggle-link' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:ev='http://www.w3.org/2001/xml-events' viewBox='0 0 20 4'%3E%3Cstyle type='text/css'%3E.squiggle{animation:shift .3s linear infinite;}@keyframes shift {from {transform:translateX(0);}to {transform:translateX(-20px);}}%3C/style%3E%3Cpath fill='none' stroke='%23ff9800' stroke-width='2' class='squiggle' d='M0,3.5 c 5,0,5,-3,10,-3 s 5,3,10,3 c 5,0,5,-3,10,-3 s 5,3,10,3'/%3E%3C/svg%3E");
-            background-position: 0 100%;
-            background-size: auto 6px;
-            background-repeat: repeat-x;
-            text-decoration: none;
+            --spacing: 4px;
+            --stroke: var(--line-active);
+            --stroke-delay: .1s;
+            --offset: 180px;
         }
     }
             `}
           >
             {user.link}
+        <svg viewBox="0 0 70 36">
+            <path d="M6.9739 30.8153H63.0244C65.5269 30.8152 75.5358 -3.68471 35.4998 2.81531C-16.1598 11.2025 0.894099 33.9766 26.9922 34.3153C104.062 35.3153 54.5169 -6.68469 23.489 9.31527" />
+        </svg>
           </a>
         </p>
       )}
