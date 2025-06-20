@@ -47,56 +47,26 @@ export default function Profile({ user }) {
         });
       }
       
-      let nextIndex = null;
       document.querySelectorAll('[data-draw-line]').forEach(container => {
         const box = container.querySelector('[data-draw-line-box]');
         if (!box) return;
-        let enterTween = null;
-        let leaveTween = null;
-        container.addEventListener('mouseenter', () => {
-          if (enterTween && enterTween.isActive()) return;
-          if (leaveTween && leaveTween.isActive()) leaveTween.kill();
-          if (nextIndex === null) {
-            nextIndex = Math.floor(Math.random() * svgVariants.length);
-          }
-          box.innerHTML = svgVariants[nextIndex];
-          const svg = box.querySelector('svg');
-          if (svg) {
-            decorateSVG(svg);
-            const path = svg.querySelector('path');
-            if (path) {
-              gsap.set(path, { drawSVG: '0%' });
-              enterTween = gsap.to(path, {
-                duration: 0.5,
-                drawSVG: '100%',
-                ease: 'power2.inOut',
-                onComplete: () => { enterTween = null; }
-              });
-            }
-          }
-          nextIndex = (nextIndex + 1) % svgVariants.length;
-        });
-        container.addEventListener('mouseleave', () => {
-          const path = box.querySelector('path');
-          if (!path) return;
-          const playOut = () => {
-            if (leaveTween && leaveTween.isActive()) return;
-            leaveTween = gsap.to(path, {
+        
+        // Show random animation on page load
+        const randomIndex = Math.floor(Math.random() * svgVariants.length);
+        box.innerHTML = svgVariants[randomIndex];
+        const svg = box.querySelector('svg');
+        if (svg) {
+          decorateSVG(svg);
+          const path = svg.querySelector('path');
+          if (path) {
+            gsap.set(path, { drawSVG: '0%' });
+            gsap.to(path, {
               duration: 0.5,
-              drawSVG: '100% 100%',
-              ease: 'power2.inOut',
-              onComplete: () => {
-                leaveTween = null;
-                box.innerHTML = '';
-              }
+              drawSVG: '100%',
+              ease: 'power2.inOut'
             });
-          };
-          if (enterTween && enterTween.isActive()) {
-            enterTween.eventCallback('onComplete', playOut);
-          } else {
-            playOut();
           }
-        });
+        }
       });
     };
     
