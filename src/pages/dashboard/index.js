@@ -17,11 +17,7 @@ import Spinner from '../../components/spinner'
 import Container from '../../components/container'
 import Search from '../../components/search'
 import ProfileSettingsModal from '../../components/profile-settings-modal'
-
-function formatDate(date) {
-  const options = { day: 'numeric', month: 'long', year: 'numeric' };
-  return new Intl.DateTimeFormat('en-US', options).format(date);
-}
+import { formatDate } from '../../lib/utils'
 
 export default function Dashboard() {
   const router = useRouter()

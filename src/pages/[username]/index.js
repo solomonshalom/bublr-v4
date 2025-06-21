@@ -6,7 +6,7 @@ import { htmlToText } from 'html-to-text'
 import { useEffect } from 'react'
 import { gsap } from 'gsap'
 
-import { truncate } from '../../lib/utils'
+import { truncate, formatDate } from '../../lib/utils'
 import { getUserByName } from '../../lib/db'
 
 import meta from '../../components/meta'
@@ -211,7 +211,7 @@ export default function Profile({ user }) {
                 }
               `}
             >
-              {new Date(post.lastEdited).toDateString()}
+              {formatDate(new Date(post.lastEdited))}
             </p>
 
             <Link href={`/${user.name}/${post.slug}`}>
