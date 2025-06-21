@@ -356,7 +356,7 @@ Explore.getLayout = function Explore(page) {
     >
       <Head>
         <title>Explore Writing Community / Bublr</title>
-        <meta name="description" content="Discover amazing writing from the Bublr community. Explore stories, articles, and thoughts from writers around the world in our minimal, ad-free platform." />
+        <meta name="description" content="An ultra-minimal communty for anyone, to write anything." />
         <meta name="keywords" content="explore, writing community, stories, articles, blog posts, minimal writing platform" />
         <link rel="canonical" href="https://bublr.life/explore" />
         <script defer src="https://cloud.umami.is/script.js" data-website-id="ec0fac0a-1f2b-44de-90d2-1e224c8d8492"></script>

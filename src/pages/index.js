@@ -201,7 +201,7 @@ Home.getLayout = function HomeLayout(page) {
             "@type": "WebSite",
             "url": "https://bublr.life/",
             "name": "Bublr",
-            "description": "An open-source, ultra-minimal community for writers to share their thoughts, stories, and ideas without ads or paywalls.",
+            "description": "An open-source, ultra-minimal community for anyone, to write anything",
             "potentialAction": {
               "@type": "SearchAction",
               "target": "https://bublr.life/{search_term_string}",
