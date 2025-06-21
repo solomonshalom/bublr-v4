@@ -355,9 +355,8 @@ Explore.getLayout = function Explore(page) {
       `}
     >
       <Head>
-        <title>Explore / JusticeRest</title>
-        <script defer src="https://cloud.umami.is/script.js" data-website-id="a0cdb368-20ae-4630-8949-ac57917e2ae3"></script>
-        <link rel="manifest" href="https://www.justice.rest/justicerest.webmanifest" />
+        <title>Explore / Bublr</title>
+        <script defer src="https://cloud.umami.is/script.js" data-website-id="ec0fac0a-1f2b-44de-90d2-1e224c8d8492"></script>        <link rel="manifest" href="https://www.justice.rest/justicerest.webmanifest" />
         <meta name="mobile-web-app-capable" content="yes" />
       </Head>
       {page}

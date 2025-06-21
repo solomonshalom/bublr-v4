@@ -1,16 +1,16 @@
-# JusticeRest
+# Bublr
 
 A platform to Speak Up, Seek Change, and Inspire Justice!
 
 ## Octoberfest
 
-In aticipation of hacktoberfest, few goals have been written down on the [issues](https://github.com/solomonshalom/JusticeRest/issues/5) tab!
+In aticipation of hacktoberfest, few goals have been written down on the [issues](https://github.com/solomonshalom/Bublr/issues/5) tab!
 
 ## Installing
 
 ```bash
-git clone https://github.com/solomonshalom/JusticeRest.git
-cd JusticeRest
+git clone https://github.com/solomonshalom/Bublr.git
+cd Bublr
 npm install --force
 ```
 

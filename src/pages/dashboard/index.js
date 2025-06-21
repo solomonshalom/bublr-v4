@@ -276,7 +276,7 @@ export default function Dashboard() {
                   margin-top: 2rem;
                 `}
               >
-                Welcome to JusticeRest! Click the <b>Explore</b> button to check out other posts or create your own by clicking the <b>Pencil Icon</b> near the search bar, located above the text
+                Welcome to Bublr! Click the <b>Explore</b> button to check out other posts or create your own by clicking the <b>Pencil Icon</b> near the search bar, located above the text
               </p>
             </div>
           }
@@ -297,7 +297,7 @@ Dashboard.getLayout = function DashboardLayout(page) {
       `}
     >
       <Head>
-        <title>Dashboard / JusticeRest</title>
+        <title>Dashboard / Bublr</title>
 
         <script defer src="https://cloud.umami.is/script.js" data-website-id="a0cdb368-20ae-4630-8949-ac57917e2ae3"></script>
       
