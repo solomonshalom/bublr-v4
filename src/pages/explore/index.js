@@ -37,30 +37,45 @@ export default function Explore() {
 
   // Load initial posts on component mount
   useEffect(() => {
-    if (user) {
+    if (user && !userLoading) {
       loadInitialPosts();
     }
-  }, [user]);
+  }, [user, userLoading]);
 
   const loadInitialPosts = async () => {
+    if (isSearchLoading) return; // Prevent multiple simultaneous calls
+    
     setIsSearchLoading(true);
     try {
-      const posts = await searchPosts(''); // Empty search returns recent posts
-      const postsWithAuthors = await setPostAuthorProfilePics(posts);
-      setExplorePosts(postsWithAuthors);
-      setHasSearched(false); // Reset hasSearched to false after loading initial posts
-    } catch (error) {
-      console.error('Error loading initial posts:', error);
-      // If there's an error loading posts, still try to show something
-      const fallbackSnapshot = await firestore
+      // Use direct Firestore query for initial load instead of searchPosts function
+      const snapshot = await firestore
         .collection('posts')
         .where('published', '==', true)
+        .orderBy('createdAt', 'desc')
         .limit(20)
         .get();
       
-      const fallbackPosts = fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const fallbackPostsWithAuthors = await setPostAuthorProfilePics(fallbackPosts);
-      setExplorePosts(fallbackPostsWithAuthors);
+      const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const postsWithAuthors = await setPostAuthorProfilePics(posts);
+      setExplorePosts(postsWithAuthors);
+      setHasSearched(false);
+    } catch (error) {
+      console.error('Error loading initial posts:', error);
+      // Even simpler fallback that doesn't depend on createdAt field
+      try {
+        const fallbackSnapshot = await firestore
+          .collection('posts')
+          .where('published', '==', true)
+          .limit(20)
+          .get();
+        
+        const fallbackPosts = fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const fallbackPostsWithAuthors = await setPostAuthorProfilePics(fallbackPosts);
+        setExplorePosts(fallbackPostsWithAuthors);
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+        setExplorePosts([]);
+      }
     } finally {
       setIsSearchLoading(false);
     }
