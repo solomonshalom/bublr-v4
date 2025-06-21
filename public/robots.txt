@@ -2,5 +2,12 @@
 User-agent: *
 Allow: /
 
+# Block dashboard and authentication pages from crawlers
+Disallow: /dashboard/
+Disallow: /api/
+
+# Crawl delay to be respectful
+Crawl-delay: 1
+
 # Sitemap location
 Sitemap: https://bublr.life/sitemap.xml

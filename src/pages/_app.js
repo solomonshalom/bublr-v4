@@ -24,11 +24,17 @@ const App = ({ Component, pageProps }) => {
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap"
           rel="stylesheet"
         />
+        {/* SEO Meta Tags */}
+        <meta name="author" content="Bublr" />
+        <meta name="robots" content="index, follow, max-image-preview:large" />
+        <meta httpEquiv="Content-Language" content="en" />
+        
         {/* Open Graph default fallback values */}
         {!router.pathname.includes('[') && (
           <>
             <meta property="og:site_name" content="Bublr" />
             <meta property="twitter:site" content="@bublr" />
+            <meta property="og:locale" content="en_US" />
           </>
         )}
       </Head>
