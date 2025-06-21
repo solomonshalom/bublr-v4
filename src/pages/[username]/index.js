@@ -138,7 +138,7 @@ export default function Profile({ user }) {
             rel="noreferrer"
             css={css`
               color: inherit;
-              margin-left: 1em;
+              margin-left: 0em;
               margin-right: 1em;
               text-decoration: none;
               display: inline-block;
