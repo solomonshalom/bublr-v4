@@ -47,52 +47,47 @@ export default function Explore() {
     
     setIsSearchLoading(true);
     try {
-      // Try to get published posts ordered by createdAt first
-      let snapshot;
-      try {
-        snapshot = await firestore
-          .collection('posts')
-          .where('published', '==', true)
-          .orderBy('createdAt', 'desc')
-          .limit(20)
-          .get();
-      } catch (orderError) {
-        console.log('OrderBy createdAt failed, trying without ordering:', orderError);
-        // If ordering fails (likely due to missing index), get posts without ordering
-        snapshot = await firestore
-          .collection('posts')
-          .where('published', '==', true)
-          .limit(20)
-          .get();
-      }
+      // First, try to get all posts and filter client-side for better reliability
+      const allSnapshot = await firestore
+        .collection('posts')
+        .limit(50) // Get more posts to have a good selection after filtering
+        .get();
       
-      const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const allPosts = allSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(post => post.published === true); // Filter published posts client-side
       
-      // Sort posts by lastEdited or createdAt if available, otherwise keep them as-is
-      const sortedPosts = posts.sort((a, b) => {
-        const aTime = a.lastEdited?.toMillis?.() || a.createdAt || 0;
-        const bTime = b.lastEdited?.toMillis?.() || b.createdAt || 0;
+      console.log('Found posts:', allPosts.length);
+      
+      // Sort posts by lastEdited or createdAt if available
+      const sortedPosts = allPosts.sort((a, b) => {
+        const aTime = a.lastEdited?.toMillis?.() || a.lastEdited?.toDate?.()?.getTime?.() || a.createdAt || 0;
+        const bTime = b.lastEdited?.toMillis?.() || b.lastEdited?.toDate?.()?.getTime?.() || b.createdAt || 0;
         return bTime - aTime; // Most recent first
       });
       
-      const postsWithAuthors = await setPostAuthorProfilePics(sortedPosts);
+      // Take only the top 20 after sorting
+      const limitedPosts = sortedPosts.slice(0, 20);
+      
+      const postsWithAuthors = await setPostAuthorProfilePics(limitedPosts);
       setExplorePosts(postsWithAuthors);
       setHasSearched(false);
+      
+      console.log('Final posts with authors:', postsWithAuthors.length);
     } catch (error) {
       console.error('Error loading initial posts:', error);
-      // Final fallback - try to get any posts at all
+      // Final fallback - try the published filter directly  
       try {
-        const allSnapshot = await firestore
+        const publishedSnapshot = await firestore
           .collection('posts')
+          .where('published', '==', true)
           .limit(20)
           .get();
         
-        const allPosts = allSnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(post => post.published); // Filter published posts client-side
-        
-        const allPostsWithAuthors = await setPostAuthorProfilePics(allPosts);
-        setExplorePosts(allPostsWithAuthors);
+        const publishedPosts = publishedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const publishedPostsWithAuthors = await setPostAuthorProfilePics(publishedPosts);
+        setExplorePosts(publishedPostsWithAuthors);
+        console.log('Fallback posts loaded:', publishedPostsWithAuthors.length);
       } catch (fallbackError) {
         console.error('All fallbacks failed:', fallbackError);
         setExplorePosts([]);
