@@ -47,33 +47,54 @@ export default function Explore() {
     
     setIsSearchLoading(true);
     try {
-      // Use direct Firestore query for initial load instead of searchPosts function
-      const snapshot = await firestore
-        .collection('posts')
-        .where('published', '==', true)
-        .orderBy('createdAt', 'desc')
-        .limit(20)
-        .get();
-      
-      const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const postsWithAuthors = await setPostAuthorProfilePics(posts);
-      setExplorePosts(postsWithAuthors);
-      setHasSearched(false);
-    } catch (error) {
-      console.error('Error loading initial posts:', error);
-      // Even simpler fallback that doesn't depend on createdAt field
+      // Try to get published posts ordered by createdAt first
+      let snapshot;
       try {
-        const fallbackSnapshot = await firestore
+        snapshot = await firestore
+          .collection('posts')
+          .where('published', '==', true)
+          .orderBy('createdAt', 'desc')
+          .limit(20)
+          .get();
+      } catch (orderError) {
+        console.log('OrderBy createdAt failed, trying without ordering:', orderError);
+        // If ordering fails (likely due to missing index), get posts without ordering
+        snapshot = await firestore
           .collection('posts')
           .where('published', '==', true)
           .limit(20)
           .get();
+      }
+      
+      const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Sort posts by lastEdited or createdAt if available, otherwise keep them as-is
+      const sortedPosts = posts.sort((a, b) => {
+        const aTime = a.lastEdited?.toMillis?.() || a.createdAt || 0;
+        const bTime = b.lastEdited?.toMillis?.() || b.createdAt || 0;
+        return bTime - aTime; // Most recent first
+      });
+      
+      const postsWithAuthors = await setPostAuthorProfilePics(sortedPosts);
+      setExplorePosts(postsWithAuthors);
+      setHasSearched(false);
+    } catch (error) {
+      console.error('Error loading initial posts:', error);
+      // Final fallback - try to get any posts at all
+      try {
+        const allSnapshot = await firestore
+          .collection('posts')
+          .limit(20)
+          .get();
         
-        const fallbackPosts = fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const fallbackPostsWithAuthors = await setPostAuthorProfilePics(fallbackPosts);
-        setExplorePosts(fallbackPostsWithAuthors);
+        const allPosts = allSnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(post => post.published); // Filter published posts client-side
+        
+        const allPostsWithAuthors = await setPostAuthorProfilePics(allPosts);
+        setExplorePosts(allPostsWithAuthors);
       } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
+        console.error('All fallbacks failed:', fallbackError);
         setExplorePosts([]);
       }
     } finally {
@@ -118,20 +139,21 @@ export default function Explore() {
     setHasSearched(true);
     
     try {
+      if (!searchInput || searchInput.trim() === '') {
+        // If search is cleared, reload initial posts
+        await loadInitialPosts();
+        return explorePosts;
+      }
+      
       const posts = await searchPosts(searchInput, 20);
       const postsWithAuthors = await setPostAuthorProfilePics(posts);
       setExplorePosts(postsWithAuthors);
-      
-      // If no posts found with search, reload all posts
-      if (postsWithAuthors.length === 0 && searchInput.trim() !== '') {
-        loadInitialPosts();
-      }
       
       return postsWithAuthors;
     } catch (error) {
       console.error('Error searching posts:', error);
       // If there's an error, fall back to loading all posts
-      loadInitialPosts();
+      await loadInitialPosts();
       return [];
     } finally {
       setIsSearchLoading(false);
@@ -140,8 +162,8 @@ export default function Explore() {
 
   const shouldShowSpinner = isSearchLoading || (!user && userLoading);
   const shouldShowPosts = user && explorePosts && explorePosts.length > 0;
-  // Only show empty state when user has explicitly searched and no results found
-  const shouldShowEmptyState = false; // Always show posts or spinner, never the empty state
+  // Show empty state only when user has searched and no results found
+  const shouldShowEmptyState = user && hasSearched && explorePosts.length === 0 && !isSearchLoading;
 
   return (
     <>
@@ -310,6 +332,14 @@ export default function Explore() {
               margin-top: 3rem;
             `}>
               <p>No posts found. Try a different search term.</p>
+            </div>
+          ) : user && explorePosts.length === 0 && !isSearchLoading ? (
+            <div css={css`
+              text-align: center;
+              color: var(--grey-3);
+              margin-top: 3rem;
+            `}>
+              <p>No posts available yet.</p>
             </div>
           ) : null}
         </>
