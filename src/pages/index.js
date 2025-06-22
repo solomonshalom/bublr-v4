@@ -11,6 +11,7 @@ import Spinner from '../components/spinner'
 import Container from '../components/container'
 import PeepWalk from '../components/PeepWalk'
 import Button, { LinkButton } from '../components/button'
+import CTAButton from '../components/cta-button'
 
 const dicebearStyles = [
   'notionists-neutral',
@@ -115,16 +116,10 @@ export default function Home() {
           </Button>
         </div>
       ) : (
-        <div
-          css={css`
-            display: flex;
-            button:first-of-type {
-              margin-right: 1rem;
-            }
-          `}
-        >
-          <Button
-            onClick={() => {
+        <CTAButton
+          onClick={(e) => {
+            // Check if click was on the arrow element
+            if (e.target.closest('.arrow')) {
               const googleAuthProvider = new firebase.auth.GoogleAuthProvider()
               auth.signInWithPopup(googleAuthProvider).then(async cred => {
                 let userExists = await userWithIDExists(cred.user.uid)
@@ -139,34 +134,11 @@ export default function Home() {
                   })
                 }
               })
-            }}
-          >
-            Google Sign In
-          </Button>
-          <Button
-            onClick={() => {
-              const githubAuthProvider = new firebase.auth.GithubAuthProvider()
-              auth.signInWithPopup(githubAuthProvider).then(async cred => {
-                let userExists = await userWithIDExists(cred.user.uid)
-
-                console.log(cred.user)
-
-                if (!userExists) {
-                  await setUser(cred.user.uid, {
-                    name: cred.user.uid,
-                    displayName: cred.user.displayName || 'Anonymous',
-                    about: 'Nothing to say about you.',
-                    posts: [],
-                    photo: generateDiceBearAvatar(cred.user.uid),
-                    readingList: [],
-                  })
-                }
-              })
-            }}
-          >
-            GitHub Sign In
-          </Button>
-        </div>
+            }
+          }}
+        >
+          Sign Up
+        </CTAButton>
       )}
       <div
         css={css`
