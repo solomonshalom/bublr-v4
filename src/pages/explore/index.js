@@ -47,85 +47,92 @@ export default function Explore() {
     
     setIsSearchLoading(true);
     try {
-      // First, try to get all posts and filter client-side for better reliability
-      const allSnapshot = await firestore
-        .collection('posts')
-        .limit(50) // Get more posts to have a good selection after filtering
-        .get();
+      // Try to use orderBy for better performance if possible
+      let query = firestore.collection('posts');
       
-      const allPosts = allSnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(post => post.published === true); // Filter published posts client-side
-      
-      console.log('Found posts:', allPosts.length);
-      
-      // Sort posts by lastEdited or createdAt if available
-      const sortedPosts = allPosts.sort((a, b) => {
-        const aTime = a.lastEdited?.toMillis?.() || a.lastEdited?.toDate?.()?.getTime?.() || a.createdAt || 0;
-        const bTime = b.lastEdited?.toMillis?.() || b.lastEdited?.toDate?.()?.getTime?.() || b.createdAt || 0;
-        return bTime - aTime; // Most recent first
-      });
-      
-      // Take only the top 20 after sorting
-      const limitedPosts = sortedPosts.slice(0, 20);
-      
-      const postsWithAuthors = await setPostAuthorProfilePics(limitedPosts);
-      setExplorePosts(postsWithAuthors);
-      setHasSearched(false);
-      
-      console.log('Final posts with authors:', postsWithAuthors.length);
-    } catch (error) {
-      console.error('Error loading initial posts:', error);
-      // Final fallback - try the published filter directly  
       try {
-        const publishedSnapshot = await firestore
-          .collection('posts')
+        // Try with compound query first (requires index)
+        const snapshot = await query
           .where('published', '==', true)
+          .orderBy('lastEdited', 'desc')
           .limit(20)
           .get();
         
-        const publishedPosts = publishedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const publishedPostsWithAuthors = await setPostAuthorProfilePics(publishedPosts);
-        setExplorePosts(publishedPostsWithAuthors);
-        console.log('Fallback posts loaded:', publishedPostsWithAuthors.length);
-      } catch (fallbackError) {
-        console.error('All fallbacks failed:', fallbackError);
-        setExplorePosts([]);
+        const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const postsWithAuthors = await setPostAuthorProfilePics(posts);
+        setExplorePosts(postsWithAuthors);
+        setHasSearched(false);
+        
+      } catch (compoundError) {
+        console.warn('Compound query failed, using fallback:', compoundError);
+        
+        // Fallback: Get published posts without ordering
+        const publishedSnapshot = await query
+          .where('published', '==', true)
+          .limit(30)
+          .get();
+        
+        const publishedPosts = publishedSnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .sort((a, b) => {
+            const aTime = a.lastEdited?.toMillis?.() || a.lastEdited?.toDate?.()?.getTime?.() || a.createdAt || 0;
+            const bTime = b.lastEdited?.toMillis?.() || b.lastEdited?.toDate?.()?.getTime?.() || b.createdAt || 0;
+            return bTime - aTime;
+          })
+          .slice(0, 20);
+        
+        const postsWithAuthors = await setPostAuthorProfilePics(publishedPosts);
+        setExplorePosts(postsWithAuthors);
+        setHasSearched(false);
       }
+      
+    } catch (error) {
+      console.error('Error loading initial posts:', error);
+      setExplorePosts([]);
     } finally {
       setIsSearchLoading(false);
     }
   };
 
-  // Set the profile pics for each author
+  // Set the profile pics for each author using batch requests
   const setPostAuthorProfilePics = async(posts) => {
     if (!posts || posts.length === 0) return [];
     
-    const postPromises = posts.map(async post => {
-      try {
-        const author = await firestore
-          .collection('users')
-          .doc(post.author)
-          .get();
-        
-        const authorData = author.data() || { displayName: 'Unknown Author', photo: '' };
-        return {
-          ...post,
-          author: {
-            ...authorData,
-            name: authorData.name || 'unknown' // Ensure name exists for the URL
-          }
+    try {
+      // Get unique author IDs
+      const uniqueAuthorIds = [...new Set(posts.map(post => post.author))];
+      
+      // Batch fetch all authors at once
+      const authorPromises = uniqueAuthorIds.map(id => 
+        firestore.collection('users').doc(id).get()
+      );
+      
+      const authorDocs = await Promise.all(authorPromises);
+      
+      // Create a map of author data
+      const authorsMap = {};
+      authorDocs.forEach((doc, index) => {
+        const authorData = doc.exists ? doc.data() : { displayName: 'Unknown Author', photo: '' };
+        authorsMap[uniqueAuthorIds[index]] = {
+          ...authorData,
+          name: authorData.name || 'unknown'
         };
-      } catch (error) {
-        console.error('Error fetching author for post:', post.id, error);
-        return {
-          ...post,
-          author: { displayName: 'Unknown Author', photo: '', name: 'unknown' }
-        };
-      }
-    });
-    
-    return await Promise.all(postPromises);
+      });
+      
+      // Map posts with author data
+      return posts.map(post => ({
+        ...post,
+        author: authorsMap[post.author] || { displayName: 'Unknown Author', photo: '', name: 'unknown' }
+      }));
+      
+    } catch (error) {
+      console.error('Error batch fetching authors:', error);
+      // Fallback to original method if batch fails
+      return posts.map(post => ({
+        ...post,
+        author: { displayName: 'Unknown Author', photo: '', name: 'unknown' }
+      }));
+    }
   };
 
   // Firebase search function
