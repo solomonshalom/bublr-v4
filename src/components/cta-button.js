@@ -28,6 +28,7 @@ const ctaButtonStyles = css`
   padding: 2px 2px 2px 52px;
   margin: 0;
   position: relative;
+  box-shadow: 0px 8px 20px -8px rgba(26, 33, 43, 0.50), 0px 4px 12px 0px rgba(26, 33, 43, 0.05), 0px 1px 3px 0px rgba(26, 33, 43, 0.25), 0px 1.5px 0.5px 0px #454D57 inset, 0px -3px 1px 0px rgba(0, 0, 0, 0.50) inset;
 
   .arrow {
     position: absolute;
