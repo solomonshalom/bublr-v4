@@ -342,8 +342,20 @@ export async function getUserByID(id) {
   }
 
   const user = doc.data()
-  const postDocPromises = user.posts.map(postId => getPostByID(postId))
-  user.posts = await Promise.all(postDocPromises)
+  
+  // Batch post fetching with error handling
+  if (user.posts && user.posts.length > 0) {
+    const postIds = user.posts.slice(0, 50); // Limit to prevent excessive queries
+    const postDocs = await firestore.getAll(
+      ...postIds.map(id => firestore.collection('posts').doc(id))
+    );
+    
+    user.posts = postDocs
+      .filter(doc => doc.exists)
+      .map(doc => ({ id: doc.id, ...doc.data() }));
+  } else {
+    user.posts = [];
+  }
 
   return { id: doc.id, ...user }
 }
@@ -359,8 +371,20 @@ export async function getUserByName(name) {
   }
 
   const user = { id: query.docs[0].id, ...query.docs[0].data() }
-  const postDocPromises = user.posts.map(postId => getPostByID(postId))
-  user.posts = await Promise.all(postDocPromises)
+  
+  // Batch post fetching with error handling
+  if (user.posts && user.posts.length > 0) {
+    const postIds = user.posts.slice(0, 50); // Limit to prevent excessive queries
+    const postDocs = await firestore.getAll(
+      ...postIds.map(id => firestore.collection('posts').doc(id))
+    );
+    
+    user.posts = postDocs
+      .filter(doc => doc.exists)
+      .map(doc => ({ id: doc.id, ...doc.data() }));
+  } else {
+    user.posts = [];
+  }
 
   return user
 }

@@ -208,16 +208,20 @@ function Editor({ user }) {
 
 function ProfileEditor({ uid }) {
   const [user, userLoading, userError] = useDocumentData(
-    firestore.doc(`users/${uid}`),
+    uid ? firestore.doc(`users/${uid}`) : null,
     {
       idField: 'id',
     },
   )
 
+  if (!uid) {
+    return <div>No user ID provided</div>
+  }
+
   if (userError) {
     return (
       <>
-        <p>Oop, we&apos;ve had an error:</p>
+        <p>Oops, we&apos;ve had an error:</p>
         <pre>{JSON.stringify(userError)}</pre>
       </>
     )
