@@ -281,7 +281,7 @@ rgb(255, 255, 255);
   }
 `
 
-export default function CTAButton({ children = 'Sign Up', ...props }) {
+export default function CTAButton({ children = 'Dashboard', ...props }) {
   return (
     <button css={ctaButtonStyles} {...props}>
       <div className="arrow">

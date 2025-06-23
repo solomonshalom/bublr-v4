@@ -281,7 +281,7 @@ const ctaButtonStyles = css`
   }
 `
 
-export default function CTAButton({ children = 'Sign Up', ...props }) {
+export default function CTAButton({ children = 'Sign Out', ...props }) {
   return (
     <button css={ctaButtonStyles} {...props}>
       <div className="arrow">
