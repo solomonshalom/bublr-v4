@@ -12,6 +12,8 @@ import Container from '../components/container'
 import PeepWalk from '../components/PeepWalk'
 import Button, { LinkButton } from '../components/button'
 import CTAButton from '../components/cta-button'
+import CTAButtonDashboard from '../components/cta-button-dashboard'
+import CTAButtonSignOut from '../components/cta-button-signout'
 
 const dicebearStyles = [
   'notionists-neutral',
@@ -102,18 +104,24 @@ export default function Home() {
         <div
           css={css`
             display: flex;
+            flex-direction: column;
+            gap: 1rem;
           `}
         >
-          <LinkButton href="/dashboard">Dashboard</LinkButton>
-          <Button
-            css={css`
-              margin-left: 1rem;
-            `}
-            outline
-            onClick={() => auth.signOut()}
-          >
-            Sign Out
-          </Button>
+          <CTAButtonDashboard
+            onClick={(e) => {
+              if (e.target.closest('.arrow')) {
+                window.location.href = '/dashboard'
+              }
+            }}
+          />
+          <CTAButtonSignOut
+            onClick={(e) => {
+              if (e.target.closest('.arrow')) {
+                auth.signOut()
+              }
+            }}
+          />
         </div>
       ) : (
         <CTAButton
