@@ -336,7 +336,7 @@ export default function ProfileSettingsModal(props) {
           transform: translate(-50%, -50%);
         `}
       >
-        <Dialog.Title>Profile Settings</Dialog.Title>
+        <Dialog.Title>Profile</Dialog.Title>
         <AnimatedUnderline />
         <Dialog.Description
           css={css`
