@@ -300,7 +300,7 @@ function AnimatedUnderline() {
       data-modal-draw-line-box="" 
       css={css`
         color: #e55050;
-        width: 200px;
+        width: 80px;
         height: 0.625em;
         position: relative;
         margin-top: 0.5rem;
