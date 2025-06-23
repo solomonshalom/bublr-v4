@@ -103,7 +103,7 @@ export default function Home() {
       ) : user ? (
         <div
           css={css`
-            display: flex;
+            display: inline-flex;
             flex-direction: column;
             gap: 0.2rem;
           `}
