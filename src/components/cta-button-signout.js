@@ -42,7 +42,7 @@ const ctaButtonStyles = css`
         rgba(255, 255, 255, 0.32) 0%,
         rgba(255, 255, 255, 0) 77.51%
       ),
-        #ff0000;
+      #d2ff00;
     box-shadow: 0px 1px 1px -0.5px rgba(11, 21, 34, 0.24),
       0px 3px 3px -1.5px rgba(11, 21, 34, 0.24),
       0px 6px 6px -3px rgba(11, 21, 34, 0.24),
@@ -281,7 +281,7 @@ const ctaButtonStyles = css`
   }
 `
 
-export default function CTAButtonSignOut({ children = 'Sign Out', ...props }) {
+export default function CTAButton({ children = 'Sign Up', ...props }) {
   return (
     <button css={ctaButtonStyles} {...props}>
       <div className="arrow">
