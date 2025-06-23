@@ -42,7 +42,7 @@ const ctaButtonStyles = css`
         rgba(255, 255, 255, 0.32) 0%,
         rgba(255, 255, 255, 0) 77.51%
       ),
-      #d2ff00;
+rgb(255, 255, 255);
     box-shadow: 0px 1px 1px -0.5px rgba(11, 21, 34, 0.24),
       0px 3px 3px -1.5px rgba(11, 21, 34, 0.24),
       0px 6px 6px -3px rgba(11, 21, 34, 0.24),
