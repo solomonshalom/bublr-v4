@@ -66,12 +66,14 @@ const cardStyles = css`
 
   .card {
     background-color: var(--background-color);
-    box-shadow: 0px var(--card-box-shadow-1-y) var(--card-box-shadow-1-blur) var(--card-box-shadow-1), 0px var(--card-box-shadow-2-y) var(--card-box-shadow-2-blur) var(--card-box-shadow-2), 0 0 0 1px var(--card-border-color);
+    box-shadow: 0px 3px 6px var(--card-hover-box-shadow-1), 0px var(--card-hover-box-shadow-2-y) var(--card-hover-box-shadow-2-blur) var(--card-hover-box-shadow-2), 0 0 0 1px var(--card-hover-border-color);
     padding: 56px 16px 16px 16px;
     border-radius: 15px;
     cursor: pointer;
     position: relative;
     transition: box-shadow .25s;
+    height: 180px;
+    width: 280px;
 
     &::before {
       content: '';
@@ -92,8 +94,8 @@ const cardStyles = css`
         position: absolute;
         inset: 4.5px;
         border-radius: 50%;
-        background-color: var(--card-icon-background-color);
-        border: 1px solid var(--card-icon-border-color);
+        background-color: var(--card-hover-icon-background-color);
+        border: 1px solid var(--card-hover-icon-border-color);
         backdrop-filter: blur(2px);
         transition: background-color .25s, border-color .25s;
       }
@@ -105,7 +107,7 @@ const cardStyles = css`
         width: 24px;
         height: 24px;
         transform: translateZ(0);
-        color: var(--card-icon-color);
+        color: var(--card-hover-icon-color);
         transition: color .25s;
       }
     }
@@ -136,7 +138,7 @@ const cardStyles = css`
       inset: 0;
       z-index: 1;
       overflow: hidden;
-      opacity: 0;
+      opacity: 1;
       transition: opacity .5s;
 
       &:before {
@@ -163,7 +165,7 @@ const cardStyles = css`
       mask-image: radial-gradient(circle at 60% 5%, black 0%, black 15%, transparent 60%);
 
       .tiles {
-        opacity: 0;
+        opacity: 1;
         transition: opacity .25s;
 
         .tile {
@@ -171,6 +173,7 @@ const cardStyles = css`
           background-color: var(--card-tile-color);
           animation-duration: 8s;
           animation-iteration-count: infinite;
+          animation-name: tile;
           opacity: 0;
 
           &.tile-4,
@@ -278,7 +281,7 @@ const cardStyles = css`
       .line {
         position: absolute;
         inset: 0;
-        opacity: 0;
+        opacity: 1;
         transition: opacity .35s;
 
         &:before,
@@ -294,7 +297,7 @@ const cardStyles = css`
           right: 0;
           height: 1px;
           transform-origin: 0 50%;
-          transform: scaleX(0);
+          transform: scaleX(1);
         }
 
         &:after {
@@ -302,7 +305,7 @@ const cardStyles = css`
           bottom: 0;
           width: 1px;
           transform-origin: 50% 0;
-          transform: scaleY(0);
+          transform: scaleY(1);
         }
 
         &.line-1 {
@@ -316,7 +319,7 @@ const cardStyles = css`
 
           &:before,
           &:after {
-            transition-delay: .3s;
+            transition-delay: 0s;
           }
         }
 
@@ -342,6 +345,11 @@ const cardStyles = css`
 
           &:after {
             right: 22.5%;
+          }
+
+          &:before,
+          &:after {
+            transition-delay: .3s;
           }
         }
       }
