@@ -71,9 +71,14 @@ const cardStyles = css`
     border-radius: 15px;
     cursor: pointer;
     position: relative;
-    transition: box-shadow .25s;
+    transition: all .25s ease;
     height: 180px;
     width: 280px;
+
+    &.expanded {
+      height: auto;
+      min-height: 180px;
+    }
 
     &::before {
       content: '';
@@ -130,6 +135,21 @@ const cardStyles = css`
       font-size: 14px;
       line-height: 1.7;
       color: var(--text-color);
+    }
+
+    .read-more {
+      z-index: 2;
+      position: relative;
+      margin-top: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--card-hover-icon-color);
+      cursor: pointer;
+      transition: color .25s ease;
+
+      &:hover {
+        color: var(--card-label-color);
+      }
     }
 
     .shine {
@@ -424,6 +444,8 @@ const cardStyles = css`
 `
 
 const AnimatedCard = ({ post, index = 0 }) => {
+  const [isExpanded, setIsExpanded] = useState(false)
+
   const getIcon = (index) => {
     const icons = [
       // House icon
@@ -489,17 +511,41 @@ const AnimatedCard = ({ post, index = 0 }) => {
     return icons[index % icons.length]
   }
 
+  const getPreviewText = () => {
+    const text = post.excerpt || (post.content ? post.content.substring(0, 200) : 'No preview available')
+    if (isExpanded) {
+      return post.excerpt || (post.content ? post.content.substring(0, 500) : 'No preview available')
+    }
+    return text.length > 100 ? text.substring(0, 100) + '...' : text
+  }
+
+  const shouldShowReadMore = () => {
+    const text = post.excerpt || post.content || ''
+    return text.length > 100
+  }
+
+  const handleReadMoreClick = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsExpanded(!isExpanded)
+  }
+
   return (
     <div css={cardStyles}>
       <Link href={`/${post.author?.name || 'unknown'}/${post.slug}`}>
-        <div className="card">
+        <div className={`card ${isExpanded ? 'expanded' : ''}`}>
           <span className="icon">
             {getIcon(index)}
           </span>
           <h4>{post.title || 'Untitled'}</h4>
           <p>
-            {post.excerpt || (post.content ? post.content.substring(0, 100) + '...' : 'No preview available')}
+            {getPreviewText()}
           </p>
+          {shouldShowReadMore() && (
+            <div className="read-more" onClick={handleReadMoreClick}>
+              {isExpanded ? 'Show less' : 'Read more'}
+            </div>
+          )}
           <div className="shine"></div>
           <div className="background">
             <div className="tiles">
