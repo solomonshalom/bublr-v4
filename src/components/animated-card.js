@@ -146,6 +146,8 @@ const cardStyles = css`
       color: var(--card-hover-icon-color);
       cursor: pointer;
       transition: color .25s ease;
+      display: inline-block;
+      margin-left: 4px;
 
       &:hover {
         color: var(--card-label-color);
@@ -516,7 +518,15 @@ const AnimatedCard = ({ post, index = 0 }) => {
     if (isExpanded) {
       return post.excerpt || (post.content ? post.content.substring(0, 500) : 'No preview available')
     }
-    return text.length > 100 ? text.substring(0, 100) + '...' : text
+    
+    if (text.length > 100) {
+      // Find the last space before character 100 to avoid cutting words
+      const truncateAt = text.lastIndexOf(' ', 100)
+      const cutPoint = truncateAt > 80 ? truncateAt : 100
+      return text.substring(0, cutPoint)
+    }
+    
+    return text
   }
 
   const shouldShowReadMore = () => {
@@ -540,10 +550,17 @@ const AnimatedCard = ({ post, index = 0 }) => {
           <h4>{post.title || 'Untitled'}</h4>
           <p>
             {getPreviewText()}
+            {shouldShowReadMore() && !isExpanded && (
+              <span>...
+                <span className="read-more" onClick={handleReadMoreClick}>
+                  Read More
+                </span>
+              </span>
+            )}
           </p>
-          {shouldShowReadMore() && (
+          {shouldShowReadMore() && isExpanded && (
             <div className="read-more" onClick={handleReadMoreClick}>
-              {isExpanded ? 'Show less' : 'Read more'}
+              Show less
             </div>
           )}
           <div className="shine"></div>
