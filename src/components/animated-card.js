@@ -135,6 +135,9 @@ const cardStyles = css`
       font-size: 14px;
       line-height: 1.7;
       color: var(--text-color);
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
     }
 
     .read-more {
