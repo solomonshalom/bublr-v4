@@ -74,10 +74,15 @@ const cardStyles = css`
     transition: all .25s ease;
     height: 180px;
     width: 280px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 
     &.expanded {
       height: auto;
       min-height: 180px;
+      max-height: 400px;
+      overflow-y: auto;
     }
 
     &::before {
@@ -138,6 +143,8 @@ const cardStyles = css`
       word-wrap: break-word;
       overflow-wrap: break-word;
       hyphens: auto;
+      flex: 1;
+      overflow: hidden;
     }
 
     .read-more {
