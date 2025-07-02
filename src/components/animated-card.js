@@ -66,24 +66,12 @@ const cardStyles = css`
 
   .card {
     background-color: var(--background-color);
-    box-shadow: 0px 3px 6px var(--card-hover-box-shadow-1), 0px var(--card-hover-box-shadow-2-y) var(--card-hover-box-shadow-2-blur) var(--card-hover-box-shadow-2), 0 0 0 1px var(--card-hover-border-color);
+    box-shadow: 0px var(--card-box-shadow-1-y) var(--card-box-shadow-1-blur) var(--card-box-shadow-1), 0px var(--card-box-shadow-2-y) var(--card-box-shadow-2-blur) var(--card-box-shadow-2), 0 0 0 1px var(--card-border-color);
     padding: 56px 16px 16px 16px;
     border-radius: 15px;
     cursor: pointer;
     position: relative;
-    transition: all .25s ease;
-    height: 180px;
-    width: 280px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    &.expanded {
-      height: auto;
-      min-height: 180px;
-      max-height: 400px;
-      overflow-y: auto;
-    }
+    transition: box-shadow .25s;
 
     &::before {
       content: '';
@@ -104,8 +92,8 @@ const cardStyles = css`
         position: absolute;
         inset: 4.5px;
         border-radius: 50%;
-        background-color: var(--card-hover-icon-background-color);
-        border: 1px solid var(--card-hover-icon-border-color);
+        background-color: var(--card-icon-background-color);
+        border: 1px solid var(--card-icon-border-color);
         backdrop-filter: blur(2px);
         transition: background-color .25s, border-color .25s;
       }
@@ -117,7 +105,7 @@ const cardStyles = css`
         width: 24px;
         height: 24px;
         transform: translateZ(0);
-        color: var(--card-hover-icon-color);
+        color: var(--card-icon-color);
         transition: color .25s;
       }
     }
@@ -140,25 +128,6 @@ const cardStyles = css`
       font-size: 14px;
       line-height: 1.7;
       color: var(--text-color);
-      flex: 1;
-      overflow: hidden;
-    }
-
-    .read-more {
-      z-index: 2;
-      position: relative;
-      margin-top: 8px;
-      font-size: 14px;
-      font-weight: bold;
-      color: var(--card-hover-icon-color);
-      cursor: pointer;
-      transition: color .25s ease;
-      display: inline-block;
-      margin-left: 4px;
-
-      &:hover {
-        color: var(--card-label-color);
-      }
     }
 
     .shine {
@@ -167,7 +136,7 @@ const cardStyles = css`
       inset: 0;
       z-index: 1;
       overflow: hidden;
-      opacity: 1;
+      opacity: 0;
       transition: opacity .5s;
 
       &:before {
@@ -194,7 +163,7 @@ const cardStyles = css`
       mask-image: radial-gradient(circle at 60% 5%, black 0%, black 15%, transparent 60%);
 
       .tiles {
-        opacity: 1;
+        opacity: 0;
         transition: opacity .25s;
 
         .tile {
@@ -202,7 +171,6 @@ const cardStyles = css`
           background-color: var(--card-tile-color);
           animation-duration: 8s;
           animation-iteration-count: infinite;
-          animation-name: tile;
           opacity: 0;
 
           &.tile-4,
@@ -310,7 +278,7 @@ const cardStyles = css`
       .line {
         position: absolute;
         inset: 0;
-        opacity: 1;
+        opacity: 0;
         transition: opacity .35s;
 
         &:before,
@@ -326,7 +294,7 @@ const cardStyles = css`
           right: 0;
           height: 1px;
           transform-origin: 0 50%;
-          transform: scaleX(1);
+          transform: scaleX(0);
         }
 
         &:after {
@@ -334,7 +302,7 @@ const cardStyles = css`
           bottom: 0;
           width: 1px;
           transform-origin: 50% 0;
-          transform: scaleY(1);
+          transform: scaleY(0);
         }
 
         &.line-1 {
@@ -348,7 +316,7 @@ const cardStyles = css`
 
           &:before,
           &:after {
-            transition-delay: 0s;
+            transition-delay: .3s;
           }
         }
 
@@ -374,11 +342,6 @@ const cardStyles = css`
 
           &:after {
             right: 22.5%;
-          }
-
-          &:before,
-          &:after {
-            transition-delay: .3s;
           }
         }
       }
@@ -453,8 +416,6 @@ const cardStyles = css`
 `
 
 const AnimatedCard = ({ post, index = 0 }) => {
-  const [isExpanded, setIsExpanded] = useState(false)
-
   const getIcon = (index) => {
     const icons = [
       // House icon
@@ -520,56 +481,17 @@ const AnimatedCard = ({ post, index = 0 }) => {
     return icons[index % icons.length]
   }
 
-  const getPreviewText = () => {
-    const text = post.excerpt || (post.content ? post.content.substring(0, 200) : 'No preview available')
-    if (isExpanded) {
-      return post.excerpt || (post.content ? post.content.substring(0, 500) : 'No preview available')
-    }
-    
-    if (text.length > 100) {
-      // Find the last space before character 100 to avoid cutting words
-      const truncateAt = text.lastIndexOf(' ', 100)
-      const cutPoint = truncateAt > 80 ? truncateAt : 100
-      return text.substring(0, cutPoint)
-    }
-    
-    return text
-  }
-
-  const shouldShowReadMore = () => {
-    const text = post.excerpt || post.content || ''
-    return text.length > 100
-  }
-
-  const handleReadMoreClick = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsExpanded(!isExpanded)
-  }
-
   return (
     <div css={cardStyles}>
       <Link href={`/${post.author?.name || 'unknown'}/${post.slug}`}>
-        <div className={`card ${isExpanded ? 'expanded' : ''}`}>
+        <div className="card">
           <span className="icon">
             {getIcon(index)}
           </span>
           <h4>{post.title || 'Untitled'}</h4>
           <p>
-            {getPreviewText()}
-            {shouldShowReadMore() && !isExpanded && (
-              <span>...
-                <span className="read-more" onClick={handleReadMoreClick}>
-                  Read More
-                </span>
-              </span>
-            )}
+            {post.excerpt || (post.content ? post.content.substring(0, 100) + '...' : 'No preview available')}
           </p>
-          {shouldShowReadMore() && isExpanded && (
-            <div className="read-more" onClick={handleReadMoreClick}>
-              Show less
-            </div>
-          )}
           <div className="shine"></div>
           <div className="background">
             <div className="tiles">
