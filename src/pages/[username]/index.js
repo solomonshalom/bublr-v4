@@ -276,14 +276,7 @@ export default function Profile({ user }) {
   )
 }
 
-export async function getStaticPaths() {
-  return {
-    paths: [],
-    fallback: 'blocking',
-  }
-}
-
-export async function getStaticProps({ params }) {
+export async function getServerSideProps({ params }) {
   const { username } = params
 
   try {
@@ -303,7 +296,6 @@ export async function getStaticProps({ params }) {
     
     return {
       props: { user },
-      revalidate: 300, // Increase revalidation time to 5 minutes for better caching
     }
   } catch (err) {
     console.log(err)
