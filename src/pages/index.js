@@ -72,9 +72,8 @@ export default function Home() {
           margin-bottom: 1.5rem;
         `}
       >
-        An open-source, distraction-free community for anyone to write anything!
+        An open-source, distraction-free spot for anyone to write anything!
       </h1>
-      {/*
       <ul
         css={css`
           list-style: none;
@@ -97,7 +96,6 @@ export default function Home() {
         <li>No paywalls</li>
         <li>Open-source</li>
       </ul>
-      */}
       {loading ? (
           <Spinner />
       ) : user ? (
