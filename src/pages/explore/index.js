@@ -17,7 +17,6 @@ import Spinner from '../../components/spinner'
 import Container from '../../components/container'
 import Search from '../../components/search'
 import ProfileSettingsModal from '../../components/profile-settings-modal'
-import AnimatedCard from '../../components/animated-card'
 import { truncate } from '../../lib/utils'
 import { getPostByID } from '../../lib/db'
 
@@ -260,18 +259,74 @@ export default function Explore() {
           {shouldShowSpinner ? (
             <Spinner />
           ) : shouldShowPosts ? (
-            <div css={css`
-              display: grid;
-              grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-              grid-gap: 32px;
-              margin-top: 2rem;
-              position: relative;
-              z-index: 1;
+            <ul css={css`
+              list-style: none;
+              text-decoration: none;
+              li {
+                max-width: 25rem;
+                margin: 2.5rem 0;
+                text-decoration: none;
+              }
             `}>
-              {explorePosts.map((post, index) => (
-                <AnimatedCard key={post.id} post={post} index={index} />
+              {explorePosts.map(post => (
+                <li key={post.id}>
+                  <Link href={`/${post.author.name || 'unknown'}/${post.slug}`}>
+                    <div css={css`
+                      text-decoration: none; 
+                      color: inherit;
+                      display: block;
+                      cursor: pointer;
+                    `}>
+                      <h3 css={css`
+                        font-size: 1rem;
+                        font-weight: 400;
+                        margin-bottom: 0.6rem;
+                        text-decoration: none;
+                      `}>
+                        {post.title ? htmlToText(post.title) : 'Untitled'}
+                      </h3>
+
+                      <div css={css`
+                        display: flex;
+                        align-items: center;
+                        color: var(--grey-3);
+                        font-size: 0.9rem;
+                        text-decoration: none;
+                      `}>
+                        {post.author.photo && (
+                          <img
+                            src={post.author.photo}
+                            alt="Profile picture"
+                            css={css`
+                              width: 1.5rem;
+                              border-radius: 1rem;
+                              margin-right: 0.75rem;
+                            `}
+                          />
+                        )}
+                        <p style={{textDecoration: 'none', color: 'inherit'}}>
+                          {post.author.displayName || 'Unknown Author'}
+                        </p>
+                      </div>
+
+                      <p css={css`
+                        color: var(--grey-4);
+                        font-family: 'Newsreader', serif;
+                        line-height: 1.5em;
+                        margin-top: 0.5rem;
+                        text-decoration: none;
+                      `}>
+                        {post.excerpt
+                          ? htmlToText(post.excerpt)
+                          : post.content 
+                            ? truncate(htmlToText(post.content), 25)
+                            : 'No preview available'}
+                      </p>
+                    </div>
+                  </Link>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : shouldShowEmptyState ? (
             <div css={css`
               text-align: center;
