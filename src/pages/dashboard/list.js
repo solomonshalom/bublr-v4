@@ -170,7 +170,6 @@ ReadingList.getLayout = function ReadingListLayout(page) {
           href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400;1,600&display=swap"
           rel="stylesheet"
         />
-        <link rel="manifest" href="https://www.justice.rest/justicerest.webmanifest" />
         <meta name="mobile-web-app-capable" content="yes" />
         <script defer src="https://cloud.umami.is/script.js" data-website-id="a0cdb368-20ae-4630-8949-ac57917e2ae3"></script>
       </Head>

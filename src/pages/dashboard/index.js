@@ -137,7 +137,7 @@ export default function Dashboard() {
             getSearchInput={getSearchInput}
           ></Search>
           
-          <Link href="https://justice.rest/solomon/jr">
+          <Link href="https://bublr.life/solomon/guide">
             <Button
               outline
               css={css`
@@ -300,7 +300,6 @@ Dashboard.getLayout = function DashboardLayout(page) {
         <title>Dashboard / Bublr</title>
         <meta name="robots" content="noindex, nofollow" />
         <script defer src="https://cloud.umami.is/script.js" data-website-id="a0cdb368-20ae-4630-8949-ac57917e2ae3"></script>
-        <link rel="manifest" href="https://www.justice.rest/justicerest.webmanifest" />
         <meta name="mobile-web-app-capable" content="yes" />
       </Head>
       {page}
