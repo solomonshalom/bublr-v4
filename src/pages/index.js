@@ -67,7 +67,7 @@ export default function Home() {
       ></div>
       <h1
         css={css`
-          font-size: 1.5rem;
+          font-size: 1.25rem;
           letter-spacing: -0.02rem;
           margin-bottom: 1.5rem;
         `}
@@ -78,7 +78,7 @@ export default function Home() {
         css={css`
           list-style: none;
           color: var(--grey-3);
-          margin-bottom: 2.5rem;
+          margin-bottom: 2.3rem;
 
           li {
             margin: 0.75rem 0;
