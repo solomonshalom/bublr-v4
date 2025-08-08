@@ -92,9 +92,7 @@ export default function Home() {
           }
         `}
       >
-        <li>No ads</li>
-        <li>No paywalls</li>
-        <li>Open-source</li>
+        No Ads, Paywalls, & It's Open-Source!
       </ul>
       {loading ? (
           <Spinner />
