@@ -55,13 +55,13 @@ export default function Home() {
           width: 2rem;
           height: 2rem;
 
-          background-image: url('/images/logo-bublr.png');
+          background-image: url('/images/bublr-logoo.png');
           background-position: center;
           background-repeat: no-repeat;
           background-size: 2rem;
 
           html[data-theme='dark'] & {
-            background-image: url('/images/logo-bublr.png');
+            background-image: url('/images/bublr-logoo.png');
           }
         `}
       ></div>
