@@ -46,25 +46,17 @@ export default function Home() {
       <div
         css={css`
           margin-top: 0rem;
-          margin-bottom: 2.5rem;
+          margin-bottom: 1.5rem;
+          text-align: center;
+          font-size: 6rem;
 
           @media (max-width: 720px) {
-            margin-bottom: 2rem;
-          }
-
-          width: 2rem;
-          height: 2rem;
-
-          background-image: url('/images/bublr-logoo.png');
-          background-position: center;
-          background-repeat: no-repeat;
-          background-size: 2rem;
-
-          html[data-theme='dark'] & {
-            background-image: url('/images/bublr-logoo.png');
+            margin-bottom: 1.5rem;
           }
         `}
-      ></div>
+      >
+        🍱
+      </div>
       <h1
         css={css`
           font-size: 1.25rem;
@@ -86,7 +78,7 @@ export default function Home() {
 
           li::before {
             display: inline-block;
-            content: '';
+            content: '';
             font-size: 0.9rem;
             margin-right: 0.5rem;
           }
