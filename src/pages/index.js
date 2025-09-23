@@ -47,8 +47,10 @@ export default function Home() {
         css={css`
           margin-top: 0rem;
           margin-bottom: 1.5rem;
-          text-align: center;
-          font-size: 6rem;
+          font-size: 4.5rem;
+          font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", emoji, sans-serif;
+          -webkit-font-feature-settings: "liga" off, "calt" off;
+          font-feature-settings: "liga" off, "calt" off;
 
           @media (max-width: 720px) {
             margin-bottom: 1.5rem;
