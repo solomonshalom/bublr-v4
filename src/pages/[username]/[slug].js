@@ -190,7 +190,7 @@ export default function Post({ post }) {
               {post.author.displayName}
             </a>
           </Link>{' '}
-          / {new Date(post.lastEdited).toDateString()}
+          / {new Date(post.lastEdited).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
       </div>
 
