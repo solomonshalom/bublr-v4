@@ -237,9 +237,21 @@ export default function Profile({ user }) {
                     font-size: 1rem;
                     font-weight: 400;
                     margin-bottom: 0.6rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
                   `}
                 >
-                  {post.title ? htmlToText(post.title) : 'Untitled'}
+                  <span>{post.title ? htmlToText(post.title) : 'Untitled'}</span>
+                  <span
+                    css={css`
+                      font-size: 0.85rem;
+                      color: var(--grey-3);
+                      font-weight: 400;
+                    `}
+                  >
+                    ▲ {post.upvotes || 0}
+                  </span>
                 </h3>
 
                 <p

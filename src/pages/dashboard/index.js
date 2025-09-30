@@ -28,6 +28,7 @@ export default function Dashboard() {
     { idField: 'id' },
   )
   const [filteredPosts, setFilteredPosts] = useState([]);
+  const [sortBy, setSortBy] = useState('lastEdited');
 
   useEffect(() => {
     console.log(user, userLoading, userError)
@@ -137,6 +138,34 @@ export default function Dashboard() {
             getSearchInput={getSearchInput}
           ></Search>
           
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            css={css`
+              padding: 0.75em 1.5em;
+              background: var(--grey-1);
+              color: var(--grey-4);
+              border: 1px solid var(--grey-2);
+              border-radius: 0.33em;
+              cursor: pointer;
+              font-size: 0.9rem;
+              transition: all 200ms ease;
+
+              &:hover {
+                border-color: var(--grey-3);
+              }
+
+              &:focus {
+                outline: none;
+                border-color: var(--grey-3);
+              }
+            `}
+          >
+            <option value="lastEdited">Last Edited</option>
+            <option value="upvotes">Most Upvoted</option>
+            <option value="createdAt">Created Date</option>
+          </select>
+          
           <Link href="https://bublr.life/solomon/guide">
             <Button
               outline
@@ -201,11 +230,17 @@ export default function Dashboard() {
                   `}
                 >
                   {[...filteredPosts]
-                    .sort(
-                      (a, b) =>
-                        b.lastEdited.toDate().getTime() -
-                        a.lastEdited.toDate().getTime(),
-                    )
+                    .sort((a, b) => {
+                      if (sortBy === 'upvotes') {
+                        return (b.upvotes || 0) - (a.upvotes || 0);
+                      } else if (sortBy === 'createdAt') {
+                        const aTime = a.createdAt || a.lastEdited?.toDate?.()?.getTime?.() || 0;
+                        const bTime = b.createdAt || b.lastEdited?.toDate?.()?.getTime?.() || 0;
+                        return bTime - aTime;
+                      } else {
+                        return b.lastEdited.toDate().getTime() - a.lastEdited.toDate().getTime();
+                      }
+                    })
                     .map(post => (
                       <li
                         key={post.id}
@@ -262,6 +297,15 @@ export default function Dashboard() {
                               </span>
                             )}{' '}
                             {post.title ? htmlToText(post.title) : 'Untitled'}
+                            <span
+                              css={css`
+                                margin-left: 0.75rem;
+                                font-size: 0.85rem;
+                                color: var(--grey-3);
+                              `}
+                            >
+                              ▲ {post.upvotes || 0}
+                            </span>
                           </a>
                         </Link>
                       </li>

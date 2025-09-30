@@ -50,6 +50,8 @@ export const createPostWithSearch = async (postData) => {
     searchQueries,
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    upvotes: 0,
+    upvotedBy: [],
   };
   
   const docRef = await firestore.collection('posts').add(postWithSearch);
@@ -423,6 +425,8 @@ export async function createPostForUser(userId) {
     author: userId,
     published: false,
     lastEdited: firebase.firestore.Timestamp.now(),
+    upvotes: 0,
+    upvotedBy: [],
   })
 
   await firestore.collection('posts').doc(doc.id).update({ slug: doc.id })
@@ -433,4 +437,37 @@ export async function createPostForUser(userId) {
     .update({ posts: firebase.firestore.FieldValue.arrayUnion(doc.id) })
 
   return doc.id
+}
+
+export async function toggleUpvote(postId, userId) {
+  const postRef = firestore.collection('posts').doc(postId);
+  const postDoc = await postRef.get();
+  
+  if (!postDoc.exists) {
+    throw new Error('Post not found');
+  }
+  
+  const post = postDoc.data();
+  const hasUpvoted = post.upvotedBy?.includes(userId);
+  
+  if (hasUpvoted) {
+    await postRef.update({
+      upvotes: firebase.firestore.FieldValue.increment(-1),
+      upvotedBy: firebase.firestore.FieldValue.arrayRemove(userId)
+    });
+    return false;
+  } else {
+    await postRef.update({
+      upvotes: firebase.firestore.FieldValue.increment(1),
+      upvotedBy: firebase.firestore.FieldValue.arrayUnion(userId)
+    });
+    return true;
+  }
+}
+
+export async function hasUserUpvoted(postId, userId) {
+  const postDoc = await firestore.collection('posts').doc(postId).get();
+  if (!postDoc.exists) return false;
+  const post = postDoc.data();
+  return post.upvotedBy?.includes(userId) || false;
 }

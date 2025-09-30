@@ -21,6 +21,7 @@ import meta from '../../components/meta'
 import Container from '../../components/container'
 import { IconButton } from '../../components/button'
 import PostContainer from '../../components/post-container'
+import UpvoteButton from '../../components/upvote-button'
 
 function AddToReadingListButton({ uid, pid }) {
   const [user, setUser] = useState({ readingList: [] })
@@ -206,11 +207,28 @@ export default function Post({ post }) {
       />
 
       {user ? (
-        <footer>
+        <footer
+          css={css`
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+          `}
+        >
+          <UpvoteButton
+            postId={post.id}
+            userId={user.uid}
+            initialUpvotes={post.upvotes || 0}
+          />
           <AddToReadingListButton uid={user.uid} pid={post.id} />
         </footer>
       ) : (
-        ''
+        <footer>
+          <UpvoteButton
+            postId={post.id}
+            userId={null}
+            initialUpvotes={post.upvotes || 0}
+          />
+        </footer>
       )}
     </Container>
   )

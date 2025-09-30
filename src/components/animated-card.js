@@ -2,6 +2,7 @@
 import { css } from '@emotion/react'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import UpvoteButton from './upvote-button'
 
 const cardStyles = css`
   --background-color: #18181B;
@@ -384,7 +385,7 @@ const cardStyles = css`
   }
 `
 
-const AnimatedCard = ({ post, index = 0 }) => {
+const AnimatedCard = ({ post, index = 0, userId = null }) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const getIcon = (index) => {
@@ -483,6 +484,21 @@ const AnimatedCard = ({ post, index = 0 }) => {
     <div css={cardStyles}>
       <Link href={`/${post.author?.name || 'unknown'}/${post.slug}`}>
         <div className={`card ${isExpanded ? 'expanded' : ''}`}>
+          <div
+            css={css`
+              position: absolute;
+              top: 10px;
+              right: 10px;
+              z-index: 10;
+            `}
+            onClick={(e) => e.preventDefault()}
+          >
+            <UpvoteButton
+              postId={post.id}
+              userId={userId}
+              initialUpvotes={post.upvotes || 0}
+            />
+          </div>
           <span className="icon">
             {getIcon(index)}
           </span>
