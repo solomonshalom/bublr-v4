@@ -224,8 +224,9 @@ export async function getServerSideProps({ req }) {
         },
       }
     } catch (error) {
-      console.log(error)
-      return { notFound: true }
+      if (error?.code !== 'user/not-found') {
+        console.error('Failed to resolve custom domain user for home page', error)
+      }
     }
   }
 

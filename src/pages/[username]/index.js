@@ -19,29 +19,41 @@ export async function getServerSideProps({ params, req }) {
     .filter(Boolean)
   const shouldUseCustomDomain = normalizedHost && !defaultHosts.includes(normalizedHost)
 
-  try {
-    const user = shouldUseCustomDomain
-      ? await getUserByCustomDomain(normalizedHost)
-      : await getUserByName(username)
+  let user = null
 
-    const processedPosts = user.posts
-      .filter(p => p.published)
-      .map(p => ({
-        ...p,
-        lastEdited: p.lastEdited?.toDate?.()
-          ? p.lastEdited.toDate().getTime()
-          : p.lastEdited?.toMillis?.() || Date.now(),
-      }))
-      .sort((a, b) => b.lastEdited - a.lastEdited)
-      .slice(0, 20)
-
-    user.posts = processedPosts
-
-    return {
-      props: { user },
+  if (shouldUseCustomDomain) {
+    try {
+      user = await getUserByCustomDomain(normalizedHost)
+    } catch (error) {
+      if (error?.code !== 'user/not-found') {
+        console.error('Failed to resolve custom domain user for profile page', error)
+      }
     }
-  } catch (err) {
-    console.log(err)
-    return { notFound: true }
+  }
+
+  if (!user) {
+    try {
+      user = await getUserByName(username)
+    } catch (error) {
+      console.error('Failed to load profile by username', error)
+      return { notFound: true }
+    }
+  }
+
+  const processedPosts = user.posts
+    .filter(p => p.published)
+    .map(p => ({
+      ...p,
+      lastEdited: p.lastEdited?.toDate?.()
+        ? p.lastEdited.toDate().getTime()
+        : p.lastEdited?.toMillis?.() || Date.now(),
+    }))
+    .sort((a, b) => b.lastEdited - a.lastEdited)
+    .slice(0, 20)
+
+  user.posts = processedPosts
+
+  return {
+    props: { user },
   }
 }
