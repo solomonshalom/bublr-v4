@@ -4,16 +4,17 @@ import { css } from '@emotion/react'
 import { useAuthState } from 'react-firebase-hooks/auth'
 
 import firebase, { auth } from '../lib/firebase'
-import { setUser, userWithIDExists } from '../lib/db'
+import { setUser, userWithIDExists, getUserByCustomDomain, normalizeCustomDomain } from '../lib/db'
 
 import meta from '../components/meta'
 import Spinner from '../components/spinner'
 import Container from '../components/container'
 import PeepWalk from '../components/PeepWalk'
-import Button, { LinkButton } from '../components/button'
+import Button from '../components/button'
 import CTAButton from '../components/cta-button'
 import CTAButtonDashboard from '../components/cta-button-dashboard'
 import CTAButtonSignOut from '../components/cta-button-signout'
+import ProfileView from '../components/profile-view'
 
 const dicebearStyles = [
   'notionists-neutral',
@@ -29,8 +30,12 @@ function generateDiceBearAvatar(uid) {
   return `https://api.dicebear.com/9.x/${style}/svg?seed=${uid}`
 }
 
-export default function Home() {
+export default function Home({ customDomainUser }) {
   const [user, loading, error] = useAuthState(auth)
+
+  if (customDomainUser) {
+    return <ProfileView user={customDomainUser} />
+  }
 
   if (error) {
     return (
@@ -154,6 +159,10 @@ export default function Home() {
 }
 
 Home.getLayout = function HomeLayout(page) {
+  if (page?.props?.customDomainUser) {
+    return page
+  }
+
   return (
     <Container maxWidth="420px">
       <Head>
@@ -183,4 +192,47 @@ Home.getLayout = function HomeLayout(page) {
       {page}
     </Container>
   )
+}
+
+export async function getServerSideProps({ req }) {
+  const host = req?.headers?.host || ''
+  const normalizedHost = normalizeCustomDomain(host)
+  const defaultHosts = (process.env.NEXT_PUBLIC_APP_HOSTS || 'localhost:3000,bublr.life')
+    .split(',')
+    .map(h => h.trim().toLowerCase())
+    .filter(Boolean)
+
+  if (normalizedHost && !defaultHosts.includes(normalizedHost)) {
+    try {
+      const user = await getUserByCustomDomain(normalizedHost)
+      const processedPosts = user.posts
+        .filter(p => p.published)
+        .map(p => ({
+          ...p,
+          lastEdited: p.lastEdited?.toDate?.()
+            ? p.lastEdited.toDate().getTime()
+            : p.lastEdited?.toMillis?.() || Date.now(),
+        }))
+        .sort((a, b) => b.lastEdited - a.lastEdited)
+        .slice(0, 20)
+
+      user.posts = processedPosts
+
+      return {
+        props: {
+          customDomainUser: user,
+        },
+      }
+    } catch (error) {
+      if (error?.code !== 'user/not-found') {
+        console.error('Failed to resolve custom domain user for home page', error)
+      }
+    }
+  }
+
+  return {
+    props: {
+      customDomainUser: null,
+    },
+  }
 }
