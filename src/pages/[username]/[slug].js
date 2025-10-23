@@ -101,6 +101,10 @@ function AddToReadingListButton({ uid, pid }) {
 
 export default function Post({ post }) {
   const [user, _loading, _error] = useAuthState(auth)
+  const authorBaseUrl = post.author?.customDomain?.domain
+    ? `https://${post.author.customDomain.domain}`
+    : `https://bublr.life/${post.author.name}`
+  const articleUrl = `${authorBaseUrl}/${post.slug}`
 
   return (
     <Container maxWidth="640px">
@@ -108,8 +112,8 @@ export default function Post({ post }) {
         {meta({
           title: `${htmlToText(post.title) || 'Untitled'} - ${post.author.displayName} | Bublr`,
           description: post.excerpt || truncateContent(post.content, 160),
-          url: `/${post.author.name}/${post.slug}`,
-          type: 'article', 
+          url: articleUrl,
+          type: 'article',
           keywords: `${post.author.displayName}, ${post.author.name}, writing, blog post, article`
         })}
         <link
@@ -120,8 +124,8 @@ export default function Post({ post }) {
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap"
           rel="stylesheet"
         />
-        <link rel="canonical" href={`https://bublr.life/${post.author.name}/${post.slug}`} />
-        
+        <link rel="canonical" href={articleUrl} />
+
         {/* Article structured data */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{
           __html: JSON.stringify({
@@ -132,14 +136,14 @@ export default function Post({ post }) {
             "author": {
               "@type": "Person",
               "name": post.author.displayName,
-              "url": `https://bublr.life/${post.author.name}`
+              "url": authorBaseUrl
             },
             "publisher": {
               "@type": "Organization",
               "name": "Bublr",
               "url": "https://bublr.life"
             },
-            "url": `https://bublr.life/${post.author.name}/${post.slug}`,
+            "url": articleUrl,
             "datePublished": new Date(post.lastEdited).toISOString(),
             "dateModified": new Date(post.lastEdited).toISOString()
           })

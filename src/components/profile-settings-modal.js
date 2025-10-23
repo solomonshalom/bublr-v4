@@ -7,7 +7,7 @@ import { useDocumentData } from 'react-firebase-hooks/firestore'
 import { gsap } from 'gsap'
 
 import { firestore } from '../lib/firebase'
-import { userWithNameExists } from '../lib/db'
+import { userWithNameExists, userWithCustomDomainExists, normalizeCustomDomain } from '../lib/db'
 
 import Spinner from './spinner'
 import Input, { Textarea } from './input'
@@ -39,10 +39,57 @@ function Editor({ user }) {
     readingList: [],
   })
   const [usernameErr, setUsernameErr] = useState(null)
+  const [customDomainInput, setCustomDomainInput] = useState('')
+  const [customDomainErr, setCustomDomainErr] = useState(null)
+  const [checkoutErr, setCheckoutErr] = useState(null)
+  const [isStartingCheckout, setIsStartingCheckout] = useState(false)
 
   useEffect(() => {
     setClientUser(user)
+    setCustomDomainInput(user?.customDomain?.domain || '')
   }, [user])
+
+  useEffect(() => {
+    if (
+      user?.customDomainSubscription?.status !== 'pending' ||
+      !user?.customDomainSubscription?.subscriptionId
+    ) {
+      return
+    }
+
+    const controller = new AbortController()
+
+    const refreshSubscription = async () => {
+      try {
+        await fetch('/api/dodo/refresh-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            subscriptionId: user.customDomainSubscription.subscriptionId,
+            uid: user.id,
+          }),
+          signal: controller.signal,
+        })
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Failed to refresh subscription', error)
+        }
+      }
+    }
+
+    refreshSubscription()
+
+    return () => {
+      controller.abort()
+    }
+  }, [user])
+
+  const hasCustomDomainAccess = user?.customDomainSubscription?.status === 'active'
+  const normalizedCustomDomain = normalizeCustomDomain(customDomainInput)
+  const initialDomain = user?.customDomain?.domain || ''
+  const hasDomainChanged = normalizedCustomDomain !== initialDomain
 
   return (
     <>
@@ -138,6 +185,126 @@ function Editor({ user }) {
             }
           />
         </div>
+
+        <div>
+          <StyledLabel htmlFor="profile-custom-domain">Custom Domain</StyledLabel>
+          <Input
+            id="profile-custom-domain"
+            type="text"
+            placeholder="yourdomain.com"
+            value={customDomainInput}
+            disabled={!hasCustomDomainAccess && !initialDomain}
+            onChange={e => {
+              setCustomDomainErr(null)
+              setCustomDomainInput(e.target.value)
+            }}
+          />
+          {customDomainErr !== null && (
+            <p
+              css={css`
+                font-size: 0.9rem;
+                color: var(--grey-3);
+                width: 20rem;
+                margin-top: 1rem;
+              `}
+            >
+              {customDomainErr}
+            </p>
+          )}
+          {checkoutErr !== null && (
+            <p
+              css={css`
+                font-size: 0.9rem;
+                color: var(--grey-3);
+                width: 20rem;
+                margin-top: 1rem;
+              `}
+            >
+              {checkoutErr}
+            </p>
+          )}
+          {!hasCustomDomainAccess && !initialDomain && (
+            <div
+              css={css`
+                margin-top: 1rem;
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+              `}
+            >
+              <p
+                css={css`
+                  font-size: 0.9rem;
+                  color: var(--grey-3);
+                  width: 20rem;
+                `}
+              >
+                Unlock custom domains for $2/mo to connect your own domain to your Bublr profile.
+              </p>
+              <Button
+                outline
+                disabled={isStartingCheckout}
+                onClick={async () => {
+                  setCheckoutErr(null)
+                  setIsStartingCheckout(true)
+
+                  try {
+                    const response = await fetch('/api/dodo/create-checkout-session', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({ uid: user.id }),
+                    })
+
+                    if (!response.ok) {
+                      const data = await response.json().catch(() => ({}))
+                      throw new Error(data.error || 'Unable to start checkout')
+                    }
+
+                    const data = await response.json()
+                    if (data?.checkoutUrl) {
+                      window.location.href = data.checkoutUrl
+                    } else {
+                      throw new Error('Checkout link missing from response')
+                    }
+                  } catch (error) {
+                    console.error('Failed to start checkout', error)
+                    setCheckoutErr('We could not start the checkout. Please try again.')
+                  } finally {
+                    setIsStartingCheckout(false)
+                  }
+                }}
+              >
+                {isStartingCheckout ? 'Preparing checkout…' : 'Unlock custom domains ($2/mo)'}
+              </Button>
+            </div>
+          )}
+          {hasCustomDomainAccess && (
+            <p
+              css={css`
+                font-size: 0.9rem;
+                color: var(--grey-3);
+                width: 20rem;
+                margin-top: 1rem;
+              `}
+            >
+              Custom domains are active on your account. Add your domain above and save your changes.
+            </p>
+          )}
+          {user?.customDomainSubscription?.status === 'pending' && (
+            <p
+              css={css`
+                font-size: 0.9rem;
+                color: var(--grey-3);
+                width: 20rem;
+                margin-top: 1rem;
+              `}
+            >
+              We&apos;re confirming your Dodo subscription. This will update automatically once the payment is complete.
+            </p>
+          )}
+        </div>
       </div>
 
       <p
@@ -161,6 +328,29 @@ function Editor({ user }) {
           bublr.life/{user.name}
         </a>
       </p>
+      {user.customDomain?.domain && (
+        <p
+          css={css`
+            font-size: 0.9rem;
+            max-width: 20rem;
+            margin-bottom: 1.5rem;
+            margin-top: -1rem;
+            word-wrap: break-word;
+
+            a {
+              text-decoration: none;
+              color: inherit;
+              font-style: italic;
+              border-bottom: 1px dotted var(--grey-3);
+            }
+          `}
+        >
+          Custom domain:{' '}
+          <a target="_blank" rel="noreferrer" href={`https://${user.customDomain.domain}`}>
+            {user.customDomain.domain}
+          </a>
+        </p>
+      )}
 
       <Button
         css={css`
@@ -168,13 +358,20 @@ function Editor({ user }) {
           font-size: 0.9rem;
         `}
         outline
-        disabled={
-          user.name === clientUser.name &&
-          user.displayName === clientUser.displayName &&
-          user.about === clientUser.about &&
-          user.link === clientUser.link &&
-          !usernameErr
-        }
+        disabled={(() => {
+          const hasChanges =
+            user.name !== clientUser.name ||
+            user.displayName !== clientUser.displayName ||
+            user.about !== clientUser.about ||
+            user.link !== clientUser.link ||
+            hasDomainChanged
+
+          if (!hasChanges) {
+            return true
+          }
+
+          return Boolean(usernameErr) || Boolean(customDomainErr)
+        })()}
         onClick={async () => {
           if (clientUser.name !== user.name) {
             let nameClashing = await userWithNameExists(clientUser.name)
@@ -195,10 +392,60 @@ function Editor({ user }) {
             }
           }
 
+          if (normalizedCustomDomain && !hasCustomDomainAccess) {
+            setCustomDomainErr('Custom domains require an active subscription.')
+            return
+          }
+
+          if (normalizedCustomDomain) {
+            const domainPattern = /^(?!-)(?:[a-z0-9-]{1,63}\.)+[a-z]{2,}$/i
+            if (!domainPattern.test(normalizedCustomDomain)) {
+              setCustomDomainErr('Please enter a valid domain (example.com).')
+              return
+            }
+
+            const domainInUse = await userWithCustomDomainExists(
+              normalizedCustomDomain,
+              user.id,
+            )
+
+            if (domainInUse) {
+              setCustomDomainErr('That domain is already connected to another Bublr account.')
+              return
+            }
+          }
+
           let toSave = { ...clientUser }
           delete toSave.id
+
+          if (normalizedCustomDomain) {
+            toSave.customDomain = {
+              domain: normalizedCustomDomain,
+              updatedAt: Date.now(),
+            }
+          } else {
+            delete toSave.customDomain
+          }
+
           await firestore.collection('users').doc(user.id).set(toSave)
+          setClientUser(prevUser => {
+            if (normalizedCustomDomain) {
+              return {
+                ...prevUser,
+                customDomain: {
+                  domain: normalizedCustomDomain,
+                  updatedAt: Date.now(),
+                },
+              }
+            }
+
+            const nextUser = { ...prevUser }
+            delete nextUser.customDomain
+            return nextUser
+          })
+          setCustomDomainInput(normalizedCustomDomain)
           setUsernameErr(null)
+          setCustomDomainErr(null)
         }}
       >
         Save changes
