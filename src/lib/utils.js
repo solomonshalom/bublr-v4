@@ -82,3 +82,24 @@ export async function uploadToImgBB(file, apiKey) {
     return null;
   }
 }
+
+export function isValidDomain(domain) {
+  if (!domain || typeof domain !== 'string') {
+    return false;
+  }
+
+  const value = domain.trim().toLowerCase();
+
+  if (value.length > 253) {
+    return false;
+  }
+
+  const domainPattern = /^(?!-)[a-z0-9-]{1,63}(?<!-)$/;
+
+  const parts = value.split('.');
+  if (parts.length < 2) {
+    return false;
+  }
+
+  return parts.every(part => domainPattern.test(part));
+}

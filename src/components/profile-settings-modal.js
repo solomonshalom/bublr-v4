@@ -13,6 +13,7 @@ import Spinner from './spinner'
 import Input, { Textarea } from './input'
 import ModalOverlay from './modal-overlay'
 import Button, { IconButton } from './button'
+import CustomDomainSettings from './custom-domain-settings'
 
 const StyledLabel = props => (
   <label
@@ -203,6 +204,8 @@ function Editor({ user }) {
       >
         Save changes
       </Button>
+
+      <CustomDomainSettings user={user} />
     </>
   )
 }

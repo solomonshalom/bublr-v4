@@ -21,6 +21,7 @@
     "@tiptap/extension-underline": "^2.1.0",
     "@tiptap/react": "^2.1.0",
     "@tiptap/starter-kit": "^2.1.0",
+    "@dodopayments/nextjs": "^0.1.0",
     "axios": "^1.9.0",
     "firebase": "^8.7.1",
     "gsap": "^3.13.0",

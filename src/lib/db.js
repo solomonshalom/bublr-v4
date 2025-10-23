@@ -335,6 +335,28 @@ export async function userWithNameExists(name) {
   return !query.empty
 }
 
+export async function userWithCustomDomainExists(domain, { excludeUserId } = {}) {
+  if (!domain) {
+    return false
+  }
+
+  const normalized = domain.trim().toLowerCase()
+  const query = await firestore
+    .collection('users')
+    .where('customDomain', '==', normalized)
+    .get()
+
+  if (query.empty) {
+    return false
+  }
+
+  if (!excludeUserId) {
+    return true
+  }
+
+  return query.docs.some(doc => doc.id !== excludeUserId)
+}
+
 export async function getUserByID(id) {
   const doc = await firestore.collection('users').doc(id).get()
   if (!doc.exists) {
@@ -352,6 +374,30 @@ export async function getUserByName(name) {
   const query = await firestore
     .collection('users')
     .where('name', '==', name)
+    .get()
+
+  if (query.empty || !query.docs[0].exists) {
+    throw { code: 'user/not-found' }
+  }
+
+  const user = { id: query.docs[0].id, ...query.docs[0].data() }
+  const postDocPromises = user.posts.map(postId => getPostByID(postId))
+  user.posts = await Promise.all(postDocPromises)
+
+  return user
+}
+
+export async function getUserByCustomDomain(domain) {
+  if (!domain) {
+    throw { code: 'user/not-found' }
+  }
+
+  const normalized = domain.trim().toLowerCase()
+
+  const query = await firestore
+    .collection('users')
+    .where('customDomain', '==', normalized)
+    .limit(1)
     .get()
 
   if (query.empty || !query.docs[0].exists) {
