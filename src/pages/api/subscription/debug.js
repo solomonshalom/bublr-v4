@@ -15,17 +15,15 @@ export default async function handler(req, res) {
     const decodedToken = await auth.verifyIdToken(token)
 
     const envCheck = {
-      hasApiKey: !!process.env.DODO_PAYMENTS_API_KEY,
-      apiKeyLength: process.env.DODO_PAYMENTS_API_KEY?.length || 0,
-      apiKeyPrefix: process.env.DODO_PAYMENTS_API_KEY?.substring(0, 10) || 'not set',
-      hasProductId: !!process.env.DODO_SUBSCRIPTION_PRODUCT_ID,
-      productId: process.env.DODO_SUBSCRIPTION_PRODUCT_ID === 'your_product_id_here' 
-        ? 'PLACEHOLDER - NEEDS TO BE SET!' 
-        : process.env.DODO_SUBSCRIPTION_PRODUCT_ID || 'not set',
-      hasWebhookSecret: !!process.env.DODO_WEBHOOK_SECRET,
-      webhookSecret: process.env.DODO_WEBHOOK_SECRET === 'your_webhook_secret_here'
-        ? 'PLACEHOLDER - NEEDS TO BE SET!'
-        : 'set',
+      hasApiKey: !!process.env.LEMONSQUEEZY_API_KEY,
+      apiKeyLength: process.env.LEMONSQUEEZY_API_KEY?.length || 0,
+      apiKeyPrefix: process.env.LEMONSQUEEZY_API_KEY?.substring(0, 10) || 'not set',
+      hasStoreId: !!process.env.LEMONSQUEEZY_STORE_ID,
+      storeId: process.env.LEMONSQUEEZY_STORE_ID || 'not set',
+      hasVariantId: !!process.env.LEMONSQUEEZY_VARIANT_ID,
+      variantId: process.env.LEMONSQUEEZY_VARIANT_ID || 'not set',
+      hasWebhookSecret: !!process.env.LEMONSQUEEZY_WEBHOOK_SECRET,
+      webhookSecret: process.env.LEMONSQUEEZY_WEBHOOK_SECRET ? 'set (hidden)' : 'not set',
       appUrl: process.env.NEXT_PUBLIC_APP_URL,
       userId: decodedToken.uid,
       userEmail: decodedToken.email
@@ -33,12 +31,23 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       status: 'Debug info',
+      provider: 'Lemon Squeezy',
       environment: envCheck,
       issues: [
-        !envCheck.hasApiKey && 'DODO_PAYMENTS_API_KEY is not set',
-        envCheck.productId === 'PLACEHOLDER - NEEDS TO BE SET!' && 'DODO_SUBSCRIPTION_PRODUCT_ID needs to be updated',
-        envCheck.webhookSecret === 'PLACEHOLDER - NEEDS TO BE SET!' && 'DODO_WEBHOOK_SECRET needs to be updated'
-      ].filter(Boolean)
+        !envCheck.hasApiKey && 'LEMONSQUEEZY_API_KEY is not set - Get it from https://app.lemonsqueezy.com/settings/api',
+        !envCheck.hasStoreId && 'LEMONSQUEEZY_STORE_ID is not set - Get it from https://app.lemonsqueezy.com/settings/stores',
+        !envCheck.hasVariantId && 'LEMONSQUEEZY_VARIANT_ID is not set - Create a subscription product and copy the variant ID',
+        !envCheck.hasWebhookSecret && 'LEMONSQUEEZY_WEBHOOK_SECRET is not set - Create a webhook and copy the secret'
+      ].filter(Boolean),
+      nextSteps: envCheck.issues?.length > 0 ? [
+        '1. Go to https://app.lemonsqueezy.com',
+        '2. Get your API key from Settings > API',
+        '3. Get your Store ID from Settings > Stores',
+        '4. Create a subscription product and get the Variant ID',
+        '5. Create a webhook at Settings > Webhooks',
+        '6. Update your .env.local file',
+        '7. Restart your dev server'
+      ] : ['All configuration looks good! Try subscribing now.']
     })
   } catch (error) {
     return res.status(500).json({

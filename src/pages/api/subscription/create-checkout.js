@@ -1,4 +1,4 @@
-import DodoPayments from 'dodopayments'
+import { lemonSqueezySetup, createCheckout } from '@lemonsqueezy/lemonsqueezy.js'
 import { firestore, auth } from '../../../lib/firebase'
 
 export default async function handler(req, res) {
@@ -8,18 +8,24 @@ export default async function handler(req, res) {
 
   try {
     // Validate environment variables first
-    if (!process.env.DODO_PAYMENTS_API_KEY) {
+    if (!process.env.LEMONSQUEEZY_API_KEY) {
       return res.status(500).json({ 
         error: 'Configuration error',
-        details: 'DODO_PAYMENTS_API_KEY is not set in environment variables'
+        details: 'LEMONSQUEEZY_API_KEY is not set in environment variables'
       })
     }
 
-    if (!process.env.DODO_SUBSCRIPTION_PRODUCT_ID || 
-        process.env.DODO_SUBSCRIPTION_PRODUCT_ID === 'your_product_id_here') {
+    if (!process.env.LEMONSQUEEZY_STORE_ID) {
       return res.status(500).json({ 
         error: 'Configuration error',
-        details: 'DODO_SUBSCRIPTION_PRODUCT_ID is not set or is still a placeholder. Please create a subscription product in Dodo dashboard and update .env.local'
+        details: 'LEMONSQUEEZY_STORE_ID is not set. Get it from Settings > Stores in Lemon Squeezy dashboard'
+      })
+    }
+
+    if (!process.env.LEMONSQUEEZY_VARIANT_ID) {
+      return res.status(500).json({ 
+        error: 'Configuration error',
+        details: 'LEMONSQUEEZY_VARIANT_ID is not set. Create a subscription product and copy the variant ID'
       })
     }
 
@@ -43,34 +49,55 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'You already have an active subscription' })
     }
 
-    const dodo = new DodoPayments({
-      bearerToken: process.env.DODO_PAYMENTS_API_KEY
+    // Configure Lemon Squeezy
+    lemonSqueezySetup({
+      apiKey: process.env.LEMONSQUEEZY_API_KEY,
+      onError: (error) => console.error('Lemon Squeezy Error:', error)
     })
 
-    const checkoutSession = await dodo.checkoutSessions.create({
-      product_cart: [
-        {
-          product_id: process.env.DODO_SUBSCRIPTION_PRODUCT_ID,
-          quantity: 1
-        }
-      ],
-      customer: {
-        email: decodedToken.email,
-        name: userData.displayName || userData.name
-      },
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://bublr.life'}/dashboard?subscription=success`,
-      confirm: true
-    })
+    // Create checkout session
+    const checkout = await createCheckout(
+      process.env.LEMONSQUEEZY_STORE_ID,
+      process.env.LEMONSQUEEZY_VARIANT_ID,
+      {
+        checkoutData: {
+          email: decodedToken.email,
+          name: userData.displayName || userData.name,
+          custom: {
+            user_id: userId
+          }
+        },
+        checkoutOptions: {
+          embed: false,
+          media: true,
+          logo: true,
+          desc: true,
+          discount: true,
+          dark: false,
+          subscriptionPreview: true,
+          buttonColor: '#7C3AED'
+        },
+        expiresAt: null,
+        preview: false,
+        testMode: process.env.NODE_ENV !== 'production'
+      }
+    )
 
+    if (checkout.error) {
+      throw new Error(checkout.error.message || 'Failed to create checkout')
+    }
+
+    // Update user subscription status to pending
     await firestore.collection('users').doc(userId).update({
       subscriptionStatus: 'pending',
       updatedAt: Date.now()
     })
 
     return res.status(200).json({ 
-      checkout_url: checkoutSession.url,
-      session_id: checkoutSession.id
+      checkout_url: checkout.data.data.attributes.url,
+      checkout_id: checkout.data.data.id
     })
+
   } catch (error) {
     console.error('Error creating checkout session:', error)
     console.error('Error details:', {
@@ -81,7 +108,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ 
       error: 'Failed to create checkout session',
       details: error.message,
-      hint: 'Please check that DODO_PAYMENTS_API_KEY and DODO_SUBSCRIPTION_PRODUCT_ID are set correctly in environment variables'
+      hint: 'Please check that LEMONSQUEEZY_API_KEY, LEMONSQUEEZY_STORE_ID, and LEMONSQUEEZY_VARIANT_ID are set correctly'
     })
   }
 }
