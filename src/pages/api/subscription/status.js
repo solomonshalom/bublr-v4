@@ -22,43 +22,17 @@ export default async function handler(req, res) {
 
     const userData = userDoc.data()
 
-    let isInGracePeriod = false
-    let gracePeriodDaysLeft = 0
-
-    if (userData.subscriptionStatus === 'on_hold' && userData.subscriptionGracePeriodEnds) {
-      const now = new Date()
-      const gracePeriodEnd = userData.subscriptionGracePeriodEnds.toDate()
-      
-      if (now < gracePeriodEnd) {
-        isInGracePeriod = true
-        const diffTime = gracePeriodEnd - now
-        gracePeriodDaysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-      } else {
-        await firestore.collection('users').doc(userId).update({
-          subscriptionStatus: 'cancelled',
-          customDomainActive: false,
-          updatedAt: Date.now()
-        })
-        
-        return res.status(200).json({
-          subscriptionStatus: 'cancelled',
-          isActive: false,
-          customDomain: userData.customDomain || null,
-          customDomainActive: false,
-          domainVerified: userData.domainVerified || false
-        })
-      }
-    }
-
     const isActive = userData.subscriptionStatus === 'active' || 
-                     (userData.subscriptionStatus === 'on_hold' && isInGracePeriod)
+                     userData.subscriptionStatus === 'past_due' ||
+                     userData.subscriptionStatus === 'on_trial'
+
+    const isPastDue = userData.subscriptionStatus === 'past_due'
 
     return res.status(200).json({
       subscriptionStatus: userData.subscriptionStatus || 'none',
       subscriptionId: userData.subscriptionId || null,
       isActive,
-      isInGracePeriod,
-      gracePeriodDaysLeft,
+      isPastDue,
       customDomain: userData.customDomain || null,
       customDomainActive: userData.customDomainActive || false,
       domainVerified: userData.domainVerified || false,

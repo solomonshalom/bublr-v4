@@ -1,4 +1,4 @@
-import DodoPayments from 'dodopayments'
+import { lemonSqueezySetup, createCheckout } from '@lemonsqueezy/lemonsqueezy.js'
 import { firestore, auth } from '../../../lib/firebase'
 
 export default async function handler(req, res) {
@@ -7,19 +7,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Validate environment variables first
-    if (!process.env.DODO_PAYMENTS_API_KEY) {
+    if (!process.env.LEMON_SQUEEZY_API_KEY) {
       return res.status(500).json({ 
         error: 'Configuration error',
-        details: 'DODO_PAYMENTS_API_KEY is not set in environment variables'
+        details: 'LEMON_SQUEEZY_API_KEY is not set in environment variables'
       })
     }
 
-    if (!process.env.DODO_SUBSCRIPTION_PRODUCT_ID || 
-        process.env.DODO_SUBSCRIPTION_PRODUCT_ID === 'your_product_id_here') {
+    if (!process.env.LEMON_SQUEEZY_STORE_ID) {
       return res.status(500).json({ 
         error: 'Configuration error',
-        details: 'DODO_SUBSCRIPTION_PRODUCT_ID is not set or is still a placeholder. Please create a subscription product in Dodo dashboard and update .env.local'
+        details: 'LEMON_SQUEEZY_STORE_ID is not set in environment variables'
+      })
+    }
+
+    if (!process.env.LEMON_SQUEEZY_VARIANT_ID || 
+        process.env.LEMON_SQUEEZY_VARIANT_ID === 'your_product_variant_id') {
+      return res.status(500).json({ 
+        error: 'Configuration error',
+        details: 'LEMON_SQUEEZY_VARIANT_ID is not set or is still a placeholder. Please create a subscription product in Lemon Squeezy dashboard and update .env.local'
       })
     }
 
@@ -43,24 +49,26 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'You already have an active subscription' })
     }
 
-    const dodo = new DodoPayments({
-      bearerToken: process.env.DODO_PAYMENTS_API_KEY
+    lemonSqueezySetup({
+      apiKey: process.env.LEMON_SQUEEZY_API_KEY
     })
 
-    const checkoutSession = await dodo.checkoutSessions.create({
-      product_cart: [
-        {
-          product_id: process.env.DODO_SUBSCRIPTION_PRODUCT_ID,
-          quantity: 1
+    const checkout = await createCheckout(
+      process.env.LEMON_SQUEEZY_STORE_ID,
+      process.env.LEMON_SQUEEZY_VARIANT_ID,
+      {
+        checkoutData: {
+          email: decodedToken.email,
+          name: userData.displayName || userData.name,
+          custom: {
+            user_id: userId
+          }
+        },
+        productOptions: {
+          redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://bublr.life'}/dashboard?subscription=success`
         }
-      ],
-      customer: {
-        email: decodedToken.email,
-        name: userData.displayName || userData.name
-      },
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://bublr.life'}/dashboard?subscription=success`,
-      confirm: true
-    })
+      }
+    )
 
     await firestore.collection('users').doc(userId).update({
       subscriptionStatus: 'pending',
@@ -68,8 +76,8 @@ export default async function handler(req, res) {
     })
 
     return res.status(200).json({ 
-      checkout_url: checkoutSession.url,
-      session_id: checkoutSession.id
+      checkout_url: checkout.data.attributes.url,
+      session_id: checkout.data.id
     })
   } catch (error) {
     console.error('Error creating checkout session:', error)
@@ -81,7 +89,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ 
       error: 'Failed to create checkout session',
       details: error.message,
-      hint: 'Please check that DODO_PAYMENTS_API_KEY and DODO_SUBSCRIPTION_PRODUCT_ID are set correctly in environment variables'
+      hint: 'Please check that LEMON_SQUEEZY_API_KEY, LEMON_SQUEEZY_STORE_ID, and LEMON_SQUEEZY_VARIANT_ID are set correctly in environment variables'
     })
   }
 }

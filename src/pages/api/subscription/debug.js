@@ -15,15 +15,17 @@ export default async function handler(req, res) {
     const decodedToken = await auth.verifyIdToken(token)
 
     const envCheck = {
-      hasApiKey: !!process.env.DODO_PAYMENTS_API_KEY,
-      apiKeyLength: process.env.DODO_PAYMENTS_API_KEY?.length || 0,
-      apiKeyPrefix: process.env.DODO_PAYMENTS_API_KEY?.substring(0, 10) || 'not set',
-      hasProductId: !!process.env.DODO_SUBSCRIPTION_PRODUCT_ID,
-      productId: process.env.DODO_SUBSCRIPTION_PRODUCT_ID === 'your_product_id_here' 
+      hasApiKey: !!process.env.LEMON_SQUEEZY_API_KEY,
+      apiKeyLength: process.env.LEMON_SQUEEZY_API_KEY?.length || 0,
+      apiKeyPrefix: process.env.LEMON_SQUEEZY_API_KEY?.substring(0, 10) || 'not set',
+      hasStoreId: !!process.env.LEMON_SQUEEZY_STORE_ID,
+      storeId: process.env.LEMON_SQUEEZY_STORE_ID || 'not set',
+      hasVariantId: !!process.env.LEMON_SQUEEZY_VARIANT_ID,
+      variantId: process.env.LEMON_SQUEEZY_VARIANT_ID === 'your_product_variant_id' 
         ? 'PLACEHOLDER - NEEDS TO BE SET!' 
-        : process.env.DODO_SUBSCRIPTION_PRODUCT_ID || 'not set',
-      hasWebhookSecret: !!process.env.DODO_WEBHOOK_SECRET,
-      webhookSecret: process.env.DODO_WEBHOOK_SECRET === 'your_webhook_secret_here'
+        : process.env.LEMON_SQUEEZY_VARIANT_ID || 'not set',
+      hasWebhookSecret: !!process.env.LEMON_SQUEEZY_WEBHOOK_SECRET,
+      webhookSecret: process.env.LEMON_SQUEEZY_WEBHOOK_SECRET === 'your_webhook_secret'
         ? 'PLACEHOLDER - NEEDS TO BE SET!'
         : 'set',
       appUrl: process.env.NEXT_PUBLIC_APP_URL,
@@ -35,9 +37,10 @@ export default async function handler(req, res) {
       status: 'Debug info',
       environment: envCheck,
       issues: [
-        !envCheck.hasApiKey && 'DODO_PAYMENTS_API_KEY is not set',
-        envCheck.productId === 'PLACEHOLDER - NEEDS TO BE SET!' && 'DODO_SUBSCRIPTION_PRODUCT_ID needs to be updated',
-        envCheck.webhookSecret === 'PLACEHOLDER - NEEDS TO BE SET!' && 'DODO_WEBHOOK_SECRET needs to be updated'
+        !envCheck.hasApiKey && 'LEMON_SQUEEZY_API_KEY is not set',
+        !envCheck.hasStoreId && 'LEMON_SQUEEZY_STORE_ID is not set',
+        envCheck.variantId === 'PLACEHOLDER - NEEDS TO BE SET!' && 'LEMON_SQUEEZY_VARIANT_ID needs to be updated',
+        envCheck.webhookSecret === 'PLACEHOLDER - NEEDS TO BE SET!' && 'LEMON_SQUEEZY_WEBHOOK_SECRET needs to be updated'
       ].filter(Boolean)
     })
   } catch (error) {

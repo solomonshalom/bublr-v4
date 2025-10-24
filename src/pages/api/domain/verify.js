@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       })
     }
 
-    if (userData.subscriptionStatus !== 'active') {
+    if (userData.subscriptionStatus !== 'active' && userData.subscriptionStatus !== 'past_due') {
       return res.status(403).json({ 
         error: 'Active subscription required',
         message: 'Your subscription must be active to verify a domain'

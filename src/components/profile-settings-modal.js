@@ -154,7 +154,8 @@ function CustomDomainSection({ userId }) {
   }
 
   const isSubscribed = subscription?.subscriptionStatus === 'active' || 
-                       (subscription?.subscriptionStatus === 'on_hold' && subscription?.isInGracePeriod)
+                       subscription?.subscriptionStatus === 'past_due' ||
+                       subscription?.subscriptionStatus === 'on_trial'
 
   return (
     <div css={css`
@@ -171,20 +172,20 @@ function CustomDomainSection({ userId }) {
         gap: 0.5rem;
       `}>
         Custom Domain
-        {isSubscribed && <span css={css`
+        {subscription?.subscriptionStatus === 'active' && <span css={css`
           font-size: 0.75rem;
           padding: 0.25em 0.5em;
           background: #22c55e;
           color: white;
           border-radius: 0.25rem;
         `}>Active</span>}
-        {subscription?.isInGracePeriod && <span css={css`
+        {subscription?.isPastDue && <span css={css`
           font-size: 0.75rem;
           padding: 0.25em 0.5em;
           background: #f59e0b;
           color: white;
           border-radius: 0.25rem;
-        `}>Grace Period</span>}
+        `}>Payment Retry</span>}
       </h3>
 
       {error && (
@@ -397,7 +398,7 @@ function CustomDomainSection({ userId }) {
         </>
       )}
 
-      {subscription?.isInGracePeriod && (
+      {subscription?.isPastDue && (
         <div css={css`
           margin-top: 1rem;
           padding: 1rem;
@@ -407,8 +408,8 @@ function CustomDomainSection({ userId }) {
           color: var(--grey-5);
           font-size: 0.9rem;
         `}>
-          ⚠️ <strong>Payment Failed - Grace Period</strong><br />
-          Your domain will be deactivated in {subscription.gracePeriodDaysLeft} day{subscription.gracePeriodDaysLeft !== 1 ? 's' : ''}. Please update your payment method.
+          ⚠️ <strong>Payment Failed - Automatic Retry</strong><br />
+          Lemon Squeezy will automatically attempt to recover your payment over the next 2 weeks. Your domain remains active during this time. Please update your payment method in your Lemon Squeezy account.
         </div>
       )}
     </div>
