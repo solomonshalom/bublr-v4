@@ -74,6 +74,7 @@ function List({ uid }) {
                     align-items: center;
                     color: var(--grey-3);
                     font-size: 0.9rem;
+                    gap: 0.75rem;
                   `}
                 >
                   <img
@@ -82,10 +83,21 @@ function List({ uid }) {
                     css={css`
                       width: 1.5rem;
                       border-radius: 1rem;
-                      margin-right: 0.75rem;
                     `}
                   />
                   <p>{post.author.displayName}</p>
+                  <span
+                    css={css`
+                      margin-left: auto;
+                      display: flex;
+                      align-items: center;
+                      gap: 0.25rem;
+                      font-size: 0.85rem;
+                      color: var(--grey-3);
+                    `}
+                  >
+                    ▲ {post.upvotes || 0}
+                  </span>
                 </div>
 
                 <p

@@ -27,6 +27,7 @@ export default function Explore() {
   const [explorePosts, setExplorePosts] = useState([]);
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [sortBy, setSortBy] = useState('recent');
 
   useEffect(() => {
     if (!user && !userLoading && !userError) {
@@ -35,28 +36,44 @@ export default function Explore() {
     }
   }, [router, user, userLoading, userError]);
 
-  // Load initial posts on component mount
+  // Load initial posts on component mount or when sort changes
   useEffect(() => {
     if (user && !userLoading) {
       loadInitialPosts();
     }
-  }, [user, userLoading]);
+  }, [user, userLoading, sortBy]);
 
   const loadInitialPosts = async () => {
-    if (isSearchLoading) return; // Prevent multiple simultaneous calls
+    if (isSearchLoading) return;
     
     setIsSearchLoading(true);
     try {
-      // Try to use orderBy for better performance if possible
       let query = firestore.collection('posts');
       
       try {
-        // Try with compound query first (requires index)
-        const snapshot = await query
-          .where('published', '==', true)
-          .orderBy('lastEdited', 'desc')
-          .limit(20)
-          .get();
+        let snapshot;
+        if (sortBy === 'upvotes') {
+          snapshot = await query
+            .where('published', '==', true)
+            .orderBy('upvotes', 'desc')
+            .limit(20)
+            .get();
+        } else if (sortBy === 'trending') {
+          const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+          snapshot = await query
+            .where('published', '==', true)
+            .where('createdAt', '>=', thirtyDaysAgo)
+            .orderBy('createdAt', 'desc')
+            .orderBy('upvotes', 'desc')
+            .limit(20)
+            .get();
+        } else {
+          snapshot = await query
+            .where('published', '==', true)
+            .orderBy('lastEdited', 'desc')
+            .limit(20)
+            .get();
+        }
         
         const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const postsWithAuthors = await setPostAuthorProfilePics(posts);
@@ -66,21 +83,30 @@ export default function Explore() {
       } catch (compoundError) {
         console.warn('Compound query failed, using fallback:', compoundError);
         
-        // Fallback: Get published posts without ordering
         const publishedSnapshot = await query
           .where('published', '==', true)
           .limit(30)
           .get();
         
-        const publishedPosts = publishedSnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .sort((a, b) => {
+        let publishedPosts = publishedSnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        if (sortBy === 'upvotes') {
+          publishedPosts.sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
+        } else if (sortBy === 'trending') {
+          const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+          publishedPosts = publishedPosts
+            .filter(post => (post.createdAt || 0) >= thirtyDaysAgo)
+            .sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0));
+        } else {
+          publishedPosts.sort((a, b) => {
             const aTime = a.lastEdited?.toMillis?.() || a.lastEdited?.toDate?.()?.getTime?.() || a.createdAt || 0;
             const bTime = b.lastEdited?.toMillis?.() || b.lastEdited?.toDate?.()?.getTime?.() || b.createdAt || 0;
             return bTime - aTime;
-          })
-          .slice(0, 20);
+          });
+        }
         
+        publishedPosts = publishedPosts.slice(0, 20);
         const postsWithAuthors = await setPostAuthorProfilePics(publishedPosts);
         setExplorePosts(postsWithAuthors);
         setHasSearched(false);
@@ -254,6 +280,33 @@ export default function Explore() {
                 margin-left: 0em
               `}
             />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              css={css`
+                padding: 0.75em 1.5em;
+                background: var(--grey-1);
+                color: var(--grey-4);
+                border: 1px solid var(--grey-2);
+                border-radius: 0.33em;
+                cursor: pointer;
+                font-size: 0.9rem;
+                transition: all 200ms ease;
+
+                &:hover {
+                  border-color: var(--grey-3);
+                }
+
+                &:focus {
+                  outline: none;
+                  border-color: var(--grey-3);
+                }
+              `}
+            >
+              <option value="recent">Recent</option>
+              <option value="upvotes">Most Upvoted</option>
+              <option value="trending">Trending</option>
+            </select>
           </div>
 
           {shouldShowSpinner ? (
@@ -292,6 +345,7 @@ export default function Explore() {
                         color: var(--grey-3);
                         font-size: 0.9rem;
                         text-decoration: none;
+                        gap: 0.75rem;
                       `}>
                         {post.author.photo && (
                           <img
@@ -300,13 +354,22 @@ export default function Explore() {
                             css={css`
                               width: 1.5rem;
                               border-radius: 1rem;
-                              margin-right: 0.75rem;
                             `}
                           />
                         )}
                         <p style={{textDecoration: 'none', color: 'inherit'}}>
                           {post.author.displayName || 'Unknown Author'}
                         </p>
+                        <span css={css`
+                          margin-left: auto;
+                          display: flex;
+                          align-items: center;
+                          gap: 0.25rem;
+                          font-size: 0.85rem;
+                          color: var(--grey-3);
+                        `}>
+                          ▲ {post.upvotes || 0}
+                        </span>
                       </div>
 
                       <p css={css`
