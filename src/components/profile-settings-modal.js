@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { Cross2Icon } from '@radix-ui/react-icons'
 import { useDocumentData } from 'react-firebase-hooks/firestore'
+import { useAuthState } from 'react-firebase-hooks/auth'
 import { gsap } from 'gsap'
+import axios from 'axios'
 
-import { firestore } from '../lib/firebase'
+import { firestore, auth } from '../lib/firebase'
 import { userWithNameExists } from '../lib/db'
 
 import Spinner from './spinner'
@@ -27,6 +29,391 @@ const StyledLabel = props => (
     {props.children}
   </label>
 )
+
+function CustomDomainSection({ userId }) {
+  const [authUser] = useAuthState(auth)
+  const [subscription, setSubscription] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [domain, setDomain] = useState('')
+  const [verifying, setVerifying] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState(null)
+
+  useEffect(() => {
+    fetchSubscriptionStatus()
+  }, [authUser])
+
+  const fetchSubscriptionStatus = async () => {
+    if (!authUser) return
+    
+    setLoading(true)
+    setError(null)
+    try {
+      const token = await authUser.getIdToken()
+      const response = await axios.get('/api/subscription/status', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setSubscription(response.data)
+      if (response.data.customDomain) {
+        setDomain(response.data.customDomain)
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to load subscription status')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubscribe = async () => {
+    if (!authUser) return
+    
+    try {
+      const token = await authUser.getIdToken()
+      const response = await axios.post('/api/subscription/create-checkout', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      if (response.data.payment_link) {
+        window.location.href = response.data.payment_link
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to create checkout session')
+    }
+  }
+
+  const handleSaveDomain = async () => {
+    if (!authUser || !domain) return
+    
+    setSaving(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const token = await authUser.getIdToken()
+      const response = await axios.post('/api/domain/set', 
+        { domain },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      setMessage({ type: 'success', text: response.data.message })
+      await fetchSubscriptionStatus()
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save domain')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleVerifyDomain = async () => {
+    if (!authUser) return
+    
+    setVerifying(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const token = await authUser.getIdToken()
+      const response = await axios.post('/api/domain/verify', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setMessage({ type: 'success', text: response.data.message })
+      await fetchSubscriptionStatus()
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.message || 'DNS verification failed')
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  const handleRemoveDomain = async () => {
+    if (!authUser || !confirm('Are you sure you want to remove your custom domain?')) return
+    
+    setSaving(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const token = await authUser.getIdToken()
+      const response = await axios.post('/api/domain/remove', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setMessage({ type: 'success', text: response.data.message })
+      setDomain('')
+      await fetchSubscriptionStatus()
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to remove domain')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div css={css`margin: 2rem 0;`}>
+        <h3 css={css`font-size: 1rem; margin-bottom: 1rem;`}>Custom Domain</h3>
+        <Spinner />
+      </div>
+    )
+  }
+
+  const isSubscribed = subscription?.subscriptionStatus === 'active' || 
+                       (subscription?.subscriptionStatus === 'on_hold' && subscription?.isInGracePeriod)
+
+  return (
+    <div css={css`
+      margin: 2.5rem 0;
+      padding: 1.5rem;
+      border: 1px solid var(--grey-2);
+      border-radius: 0.5rem;
+    `}>
+      <h3 css={css`
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      `}>
+        Custom Domain
+        {isSubscribed && <span css={css`
+          font-size: 0.75rem;
+          padding: 0.25em 0.5em;
+          background: #22c55e;
+          color: white;
+          border-radius: 0.25rem;
+        `}>Active</span>}
+        {subscription?.isInGracePeriod && <span css={css`
+          font-size: 0.75rem;
+          padding: 0.25em 0.5em;
+          background: #f59e0b;
+          color: white;
+          border-radius: 0.25rem;
+        `}>Grace Period</span>}
+      </h3>
+
+      {error && (
+        <p css={css`
+          color: #ef4444;
+          font-size: 0.9rem;
+          margin: 1rem 0;
+          padding: 0.75rem;
+          background: rgba(239, 68, 68, 0.1);
+          border-radius: 0.25rem;
+        `}>{error}</p>
+      )}
+
+      {message && (
+        <p css={css`
+          color: ${message.type === 'success' ? '#22c55e' : '#f59e0b'};
+          font-size: 0.9rem;
+          margin: 1rem 0;
+          padding: 0.75rem;
+          background: ${message.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(245, 158, 11, 0.1)'};
+          border-radius: 0.25rem;
+        `}>{message.text}</p>
+      )}
+
+      {!isSubscribed ? (
+        <>
+          <p css={css`
+            color: var(--grey-4);
+            font-size: 0.9rem;
+            margin: 1rem 0;
+            line-height: 1.5;
+          `}>
+            Access your profile via your own domain. Only $2/month.
+          </p>
+          <Button 
+            onClick={handleSubscribe}
+            css={css`font-size: 0.9rem;`}
+          >
+            Subscribe for $2/month →
+          </Button>
+        </>
+      ) : subscription?.customDomainActive ? (
+        <>
+          <p css={css`
+            color: var(--grey-4);
+            font-size: 0.9rem;
+            margin: 1rem 0;
+          `}>
+            <strong css={css`color: var(--grey-5);`}>{subscription.customDomain}</strong>
+          </p>
+          <p css={css`
+            color: #22c55e;
+            font-size: 0.9rem;
+            margin: 0.5rem 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          `}>
+            ✓ Active and verified
+          </p>
+          <p css={css`
+            color: var(--grey-3);
+            font-size: 0.9rem;
+            margin: 1rem 0;
+          `}>
+            Your profile is accessible at:<br />
+            <a 
+              href={`https://${subscription.customDomain}`}
+              target="_blank"
+              rel="noreferrer"
+              css={css`
+                color: var(--grey-5);
+                text-decoration: underline;
+              `}
+            >
+              https://{subscription.customDomain}
+            </a>
+          </p>
+          <div css={css`
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+          `}>
+            <Button
+              outline
+              onClick={() => {
+                setDomain('')
+                fetchSubscriptionStatus().then(() => {
+                  const sub = subscription
+                  sub.customDomainActive = false
+                  setSubscription(sub)
+                })
+              }}
+              css={css`font-size: 0.9rem;`}
+            >
+              Change Domain
+            </Button>
+            <Button
+              outline
+              onClick={handleRemoveDomain}
+              disabled={saving}
+              css={css`font-size: 0.9rem;`}
+            >
+              {saving ? 'Removing...' : 'Remove Domain'}
+            </Button>
+          </div>
+        </>
+      ) : subscription?.customDomain && !subscription?.domainVerified ? (
+        <>
+          <p css={css`
+            color: var(--grey-4);
+            font-size: 0.9rem;
+            margin: 1rem 0;
+          `}>
+            <strong css={css`color: var(--grey-5);`}>{subscription.customDomain}</strong>
+          </p>
+          <p css={css`
+            color: #f59e0b;
+            font-size: 0.9rem;
+            margin: 0.5rem 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          `}>
+            ⏳ Verifying DNS...
+          </p>
+          <div css={css`
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+          `}>
+            <Button
+              onClick={handleVerifyDomain}
+              disabled={verifying}
+              css={css`font-size: 0.9rem;`}
+            >
+              {verifying ? 'Checking...' : 'Check DNS Now'}
+            </Button>
+            <Button
+              outline
+              onClick={() => {
+                setDomain('')
+                const sub = subscription
+                sub.customDomain = null
+                setSubscription(sub)
+              }}
+              css={css`font-size: 0.9rem;`}
+            >
+              Change Domain
+            </Button>
+          </div>
+          <div css={css`
+            background: var(--grey-1);
+            border: 1px solid var(--grey-2);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--grey-4);
+            line-height: 1.6;
+          `}>
+            <p css={css`font-weight: 600; margin-bottom: 0.5rem;`}>DNS Setup Instructions:</p>
+            <p css={css`margin-bottom: 0.5rem;`}>
+              1. Go to your domain registrar (GoDaddy, Namecheap, etc.)<br />
+              2. Add a CNAME record pointing to: <strong>{process.env.NEXT_PUBLIC_APP_DOMAIN || 'bublr.life'}</strong>
+            </p>
+            <p css={css`color: var(--grey-3); font-size: 0.8rem;`}>
+              DNS may take up to 48 hours to propagate.
+            </p>
+          </div>
+        </>
+      ) : (
+        <>
+          <p css={css`
+            color: var(--grey-4);
+            font-size: 0.9rem;
+            margin: 1rem 0;
+          `}>
+            Enter your custom domain below:
+          </p>
+          <Input
+            type="text"
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+            placeholder="blog.example.com"
+            css={css`margin-bottom: 1rem;`}
+          />
+          <Button
+            onClick={handleSaveDomain}
+            disabled={!domain || saving}
+            css={css`font-size: 0.9rem;`}
+          >
+            {saving ? 'Saving...' : 'Save Domain'}
+          </Button>
+          <div css={css`
+            background: var(--grey-1);
+            border: 1px solid var(--grey-2);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--grey-4);
+            line-height: 1.6;
+            margin-top: 1rem;
+          `}>
+            <p css={css`font-weight: 600; margin-bottom: 0.5rem;`}>DNS Setup Instructions:</p>
+            <p>
+              After saving, you'll need to add a CNAME record at your domain registrar pointing to: <strong>{process.env.NEXT_PUBLIC_APP_DOMAIN || 'bublr.life'}</strong>
+            </p>
+          </div>
+        </>
+      )}
+
+      {subscription?.isInGracePeriod && (
+        <div css={css`
+          margin-top: 1rem;
+          padding: 1rem;
+          background: rgba(245, 158, 11, 0.1);
+          border: 1px solid #f59e0b;
+          border-radius: 0.5rem;
+          color: var(--grey-5);
+          font-size: 0.9rem;
+        `}>
+          ⚠️ <strong>Payment Failed - Grace Period</strong><br />
+          Your domain will be deactivated in {subscription.gracePeriodDaysLeft} day{subscription.gracePeriodDaysLeft !== 1 ? 's' : ''}. Please update your payment method.
+        </div>
+      )}
+    </div>
+  )
+}
 
 function Editor({ user }) {
   const [clientUser, setClientUser] = useState({
@@ -203,6 +590,8 @@ function Editor({ user }) {
       >
         Save changes
       </Button>
+
+      <CustomDomainSection userId={user.id} />
     </>
   )
 }
