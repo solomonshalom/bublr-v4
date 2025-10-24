@@ -39,10 +39,26 @@ function CustomDomainSection({ userId }) {
   const [verifying, setVerifying] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
+  const [debugInfo, setDebugInfo] = useState(null)
 
   useEffect(() => {
     fetchSubscriptionStatus()
   }, [authUser])
+
+  const fetchDebugInfo = async () => {
+    if (!authUser) return
+    
+    try {
+      const token = await authUser.getIdToken()
+      const response = await axios.get('/api/subscription/debug', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setDebugInfo(response.data)
+      console.log('Debug Info:', response.data)
+    } catch (err) {
+      console.error('Debug failed:', err)
+    }
+  }
 
   const fetchSubscriptionStatus = async () => {
     if (!authUser) return
@@ -78,7 +94,13 @@ function CustomDomainSection({ userId }) {
         window.location.href = response.data.checkout_url
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create checkout session')
+      console.error('Checkout error:', err)
+      console.error('Error response:', err.response?.data)
+      const errorMessage = err.response?.data?.details || err.response?.data?.error || 'Failed to create checkout session'
+      setError(errorMessage)
+      
+      // Fetch debug info to help diagnose
+      fetchDebugInfo()
     }
   }
 
@@ -188,14 +210,29 @@ function CustomDomainSection({ userId }) {
       </h3>
 
       {error && (
-        <p css={css`
+        <div css={css`
           color: #ef4444;
           font-size: 0.9rem;
           margin: 1rem 0;
           padding: 0.75rem;
           background: rgba(239, 68, 68, 0.1);
           border-radius: 0.25rem;
-        `}>{error}</p>
+        `}>
+          <p css={css`margin-bottom: ${debugInfo ? '0.5rem' : '0'};`}>{error}</p>
+          {debugInfo && (
+            <details css={css`margin-top: 0.5rem; font-size: 0.85rem;`}>
+              <summary css={css`cursor: pointer; color: #f59e0b;`}>View Debug Info</summary>
+              <pre css={css`
+                margin-top: 0.5rem;
+                padding: 0.5rem;
+                background: rgba(0,0,0,0.1);
+                border-radius: 0.25rem;
+                overflow-x: auto;
+                color: var(--grey-4);
+              `}>{JSON.stringify(debugInfo, null, 2)}</pre>
+            </details>
+          )}
+        </div>
       )}
 
       {message && (
