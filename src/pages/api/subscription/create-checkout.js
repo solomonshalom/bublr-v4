@@ -7,6 +7,22 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Validate environment variables first
+    if (!process.env.DODO_PAYMENTS_API_KEY) {
+      return res.status(500).json({ 
+        error: 'Configuration error',
+        details: 'DODO_PAYMENTS_API_KEY is not set in environment variables'
+      })
+    }
+
+    if (!process.env.DODO_SUBSCRIPTION_PRODUCT_ID || 
+        process.env.DODO_SUBSCRIPTION_PRODUCT_ID === 'your_product_id_here') {
+      return res.status(500).json({ 
+        error: 'Configuration error',
+        details: 'DODO_SUBSCRIPTION_PRODUCT_ID is not set or is still a placeholder. Please create a subscription product in Dodo dashboard and update .env.local'
+      })
+    }
+
     const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Unauthorized - No token provided' })
