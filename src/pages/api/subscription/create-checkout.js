@@ -31,31 +31,41 @@ export default async function handler(req, res) {
       bearerToken: process.env.DODO_PAYMENTS_API_KEY
     })
 
-    const checkoutSession = await dodo.subscriptions.create({
-      payment_link: process.env.DODO_SUBSCRIPTION_PRODUCT_ID,
+    const checkoutSession = await dodo.checkoutSessions.create({
+      product_cart: [
+        {
+          product_id: process.env.DODO_SUBSCRIPTION_PRODUCT_ID,
+          quantity: 1
+        }
+      ],
       customer: {
         email: decodedToken.email,
         name: userData.displayName || userData.name
       },
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://bublr.life'}/dashboard?subscription=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://bublr.life'}/dashboard?subscription=cancelled`
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://bublr.life'}/dashboard?subscription=success`,
+      confirm: true
     })
 
     await firestore.collection('users').doc(userId).update({
-      subscriptionId: checkoutSession.subscription_id || null,
       subscriptionStatus: 'pending',
       updatedAt: Date.now()
     })
 
     return res.status(200).json({ 
-      payment_link: checkoutSession.payment_link,
-      subscription_id: checkoutSession.subscription_id
+      checkout_url: checkoutSession.url,
+      session_id: checkoutSession.id
     })
   } catch (error) {
     console.error('Error creating checkout session:', error)
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data
+    })
     return res.status(500).json({ 
       error: 'Failed to create checkout session',
-      details: error.message 
+      details: error.message,
+      hint: 'Please check that DODO_PAYMENTS_API_KEY and DODO_SUBSCRIPTION_PRODUCT_ID are set correctly in environment variables'
     })
   }
 }

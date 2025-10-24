@@ -74,8 +74,8 @@ function CustomDomainSection({ userId }) {
         headers: { Authorization: `Bearer ${token}` }
       })
       
-      if (response.data.payment_link) {
-        window.location.href = response.data.payment_link
+      if (response.data.checkout_url) {
+        window.location.href = response.data.checkout_url
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create checkout session')
