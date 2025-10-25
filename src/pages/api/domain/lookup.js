@@ -15,33 +15,28 @@ export default async function handler(req, res) {
     try {
       const user = await getUserByDomain(domain)
 
-      if (user.subscriptionStatus === 'on_hold' && user.subscriptionGracePeriodEnds) {
-        const now = new Date()
-        const graceEnds = user.subscriptionGracePeriodEnds.toDate()
-
-        if (now > graceEnds) {
+      if (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'past_due') {
+        if (!user.customDomainActive) {
           return res.status(404).json({ 
             error: 'Domain inactive',
             active: false 
           })
         }
-      }
 
-      if (user.subscriptionStatus === 'cancelled' || !user.customDomainActive) {
+        return res.status(200).json({
+          active: true,
+          user: {
+            id: user.id,
+            name: user.name,
+            displayName: user.displayName
+          }
+        })
+      } else {
         return res.status(404).json({ 
           error: 'Domain inactive',
           active: false 
         })
       }
-
-      return res.status(200).json({
-        active: true,
-        user: {
-          id: user.id,
-          name: user.name,
-          displayName: user.displayName
-        }
-      })
     } catch (err) {
       if (err.code === 'user/not-found') {
         return res.status(404).json({ 

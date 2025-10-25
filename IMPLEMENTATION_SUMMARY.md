@@ -2,16 +2,16 @@
 
 ## Overview
 
-Successfully implemented a custom domain feature for Bublr that allows users to access their profile via their own domain (e.g., `blog.example.com`) instead of `bublr.com/username`. This premium feature is gated behind a $2/month subscription powered by Dodo Payments.
+Successfully implemented a custom domain feature for Bublr that allows users to access their profile via their own domain (e.g., `blog.example.com`) instead of `bublr.com/username`. This premium feature is gated behind a $2/month subscription powered by Lemon Squeezy.
 
 ## Key Features Implemented
 
 ### 1. **Subscription Management** 💳
-- Integration with Dodo Payments for subscription handling
+- Integration with Lemon Squeezy for subscription handling
 - Automated checkout session creation
 - Webhook-based subscription status updates
-- Support for subscription states: active, on_hold, cancelled
-- 3-day grace period for failed payments
+- Support for subscription states: active, past_due, cancelled, expired, paused
+- Automatic payment recovery with Lemon Squeezy's dunning system (4 retries over 2 weeks)
 
 ### 2. **Custom Domain Management** 🌐
 - Domain validation with format checking
@@ -27,7 +27,7 @@ Successfully implemented a custom domain feature for Bublr that allows users to 
   - Subscribed but no domain set
   - Domain pending DNS verification
   - Domain active and verified
-  - Grace period warning
+  - Payment retry warning for past_due status
 - Real-time status updates
 - DNS setup instructions
 - Loading states and error handling
@@ -35,7 +35,7 @@ Successfully implemented a custom domain feature for Bublr that allows users to 
 ### 4. **Routing & Middleware** 🔀
 - Automatic custom domain detection
 - Transparent routing to user profiles
-- Grace period handling in middleware
+- Payment recovery handling (domains remain active during `past_due` status)
 - Fallback to username URLs
 
 ## Files Created
@@ -43,8 +43,8 @@ Successfully implemented a custom domain feature for Bublr that allows users to 
 ### API Routes
 ```
 src/pages/api/subscription/
-├── create-checkout.js    # Create Dodo Payments checkout session
-├── webhook.js            # Handle Dodo Payments webhooks
+├── create-checkout.js    # Create Lemon Squeezy checkout session
+├── webhook.js            # Handle Lemon Squeezy webhooks
 └── status.js            # Get user subscription status
 
 src/pages/api/domain/
@@ -79,12 +79,12 @@ IMPLEMENTATION_SUMMARY.md       # This file
   - Added `CustomDomainSection` component
   - Subscription status fetching
   - Domain management UI
-  - All 5 UI states implemented
+  - Updated to handle Lemon Squeezy statuses (active, past_due, etc.)
 
 ### Configuration
-- **.env.sample** - Added Dodo Payments and app configuration
+- **.env.sample** - Updated with Lemon Squeezy configuration
 - **next.config.js** - Added CORS headers and custom domain support
-- **package.json** - Added dodopayments and standardwebhooks dependencies
+- **package.json** - Replaced dodopayments with @lemonsqueezy/lemonsqueezy.js
 
 ## Database Schema Changes
 
@@ -96,12 +96,13 @@ New fields added to the `users` collection in Firestore:
   customDomainActive: boolean,              // Is domain currently active
   domainVerified: boolean,                  // DNS verification status
   domainVerifiedAt: Timestamp | null,       // Verification timestamp
-  subscriptionId: string | null,            // Dodo Payments subscription ID
-  subscriptionStatus: string,               // 'none' | 'active' | 'on_hold' | 'cancelled'
-  subscriptionExpiresAt: Timestamp | null,  // Subscription expiry time
-  subscriptionGracePeriodEnds: Timestamp | null // Grace period end time (3 days)
+  subscriptionId: string | null,            // Lemon Squeezy subscription ID
+  subscriptionStatus: string,               // 'none' | 'on_trial' | 'active' | 'past_due' | 'unpaid' | 'cancelled' | 'expired' | 'paused'
+  subscriptionExpiresAt: Timestamp | null   // Subscription expiry time
 }
 ```
+
+**Note**: The `subscriptionGracePeriodEnds` field has been removed as Lemon Squeezy handles payment recovery automatically with their dunning system.
 
 ## User Flow
 
@@ -114,12 +115,12 @@ New fields added to the `users` collection in Firestore:
 
 2. **Subscription**
    - Clicks subscribe button
-   - Redirected to Dodo Payments checkout
-   - Enters payment details (test: 4242 4242 4242 4242)
+   - Redirected to Lemon Squeezy checkout
+   - Enters payment details
    - Completes payment
 
 3. **Webhook Processing**
-   - Dodo sends `subscription.active` webhook
+   - Lemon Squeezy sends `subscription_created` or `subscription_payment_success` webhook
    - Backend updates user's subscriptionStatus to 'active'
    - User returns to dashboard
 
@@ -145,25 +146,30 @@ New fields added to the `users` collection in Firestore:
    - Profile accessible at: `https://blog.example.com`
    - Original URL still works: `https://bublr.life/username`
 
-### Grace Period Flow
+### Payment Recovery Flow
 
 1. Payment fails for renewal
-2. Webhook: `subscription.on_hold` received
-3. Grace period set to 3 days from now
-4. User sees warning in Profile Settings
-5. Domain remains active during grace period
-6. After 3 days (if not resolved):
+2. Webhook: `subscription_payment_failed` received
+3. Status changes to `past_due`
+4. User sees "Payment Retry" warning in Profile Settings
+5. Domain remains active during recovery period
+6. Lemon Squeezy attempts 4 retries over 2 weeks
+7. If payment recovered:
+   - Webhook: `subscription_payment_recovered` received
+   - Status changes back to `active`
+   - User keeps domain
+8. If all retries fail:
+   - Status changes to `unpaid` or `expired`
    - Domain automatically deactivated
-   - Status changes to 'cancelled'
    - User reverts to username URL
 
 ## Technical Implementation Details
 
 ### Webhook Security
-- Signature verification using `standardwebhooks` library
+- HMAC-SHA256 signature verification using Node.js crypto module
 - Raw body parsing for signature validation
 - Event type validation
-- User lookup by subscription ID
+- User lookup by user_id in custom data
 
 ### DNS Verification
 - Attempts A record resolution first
@@ -183,7 +189,7 @@ New fields added to the `users` collection in Firestore:
 - Detects custom domains via host header
 - Skips main app domain and localhost
 - Queries lookup API to find user
-- Checks subscription and grace period status
+- Checks subscription status (allows active and past_due)
 - Rewrites URL to username path
 - Transparent to end user
 
@@ -200,20 +206,30 @@ New fields added to the `users` collection in Firestore:
 
 **POST /api/subscription/create-checkout**
 - Auth: Required (Bearer token)
-- Creates Dodo Payments checkout session
-- Returns: payment_link, subscription_id
+- Creates Lemon Squeezy checkout session
+- Uses `@lemonsqueezy/lemonsqueezy.js` SDK
+- Returns: checkout_url, session_id
 - Errors: 401 (unauthorized), 400 (already subscribed), 500 (server error)
 
 **POST /api/subscription/webhook**
-- Auth: Webhook signature
-- Handles Dodo Payments events
+- Auth: Webhook signature (HMAC-SHA256)
+- Handles Lemon Squeezy events
 - Updates subscription status in Firestore
+- Supported events:
+  - subscription_created
+  - subscription_payment_success
+  - subscription_payment_failed
+  - subscription_payment_recovered
+  - subscription_cancelled
+  - subscription_expired
+  - subscription_paused
+  - subscription_unpaused
 - Returns: 200 (success), 400 (invalid signature), 500 (processing error)
 
 **GET /api/subscription/status**
 - Auth: Required (Bearer token)
 - Returns subscription and domain status
-- Checks grace period validity
+- Checks if subscription is active or past_due
 - Returns: status object with all subscription details
 
 ### Domain APIs
@@ -229,6 +245,7 @@ New fields added to the `users` collection in Firestore:
 - Auth: Required (Bearer token)
 - Performs DNS verification
 - Activates domain if verified
+- Requires active or past_due subscription
 - Returns: verified status, record type, error details
 
 **POST /api/domain/remove**
@@ -240,16 +257,17 @@ New fields added to the `users` collection in Firestore:
 **GET /api/domain/lookup**
 - Auth: None (used by middleware)
 - Looks up user by custom domain
-- Checks subscription and grace period
+- Checks subscription status (allows active and past_due)
 - Returns: active status, user info
 
 ## Environment Variables Required
 
 ```bash
-# Dodo Payments
-DODO_PAYMENTS_API_KEY=your_api_key
-DODO_WEBHOOK_SECRET=your_webhook_secret
-DODO_SUBSCRIPTION_PRODUCT_ID=your_product_id
+# Lemon Squeezy
+LEMON_SQUEEZY_API_KEY=your_api_key_here
+LEMON_SQUEEZY_STORE_ID=your_store_id
+LEMON_SQUEEZY_WEBHOOK_SECRET=your_webhook_secret
+LEMON_SQUEEZY_VARIANT_ID=your_product_variant_id
 
 # App Configuration
 NEXT_PUBLIC_APP_DOMAIN=bublr.life
@@ -261,9 +279,10 @@ NEXT_PUBLIC_APP_URL=https://bublr.life
 ### Subscription Flow
 - [x] Create checkout session
 - [x] Handle successful payment webhook
-- [x] Handle payment failure webhook
-- [x] Handle subscription renewal webhook
+- [x] Handle payment failure webhook (past_due status)
+- [x] Handle payment recovery webhook
 - [x] Handle subscription cancellation webhook
+- [x] Handle subscription expiry webhook
 
 ### Domain Management
 - [x] Set custom domain
@@ -278,10 +297,10 @@ NEXT_PUBLIC_APP_URL=https://bublr.life
 - [x] Subscribed, no domain state
 - [x] Domain pending verification state
 - [x] Domain active state
-- [x] Grace period warning state
+- [x] Payment retry warning state (past_due)
 
 ### Edge Cases
-- [x] Expired grace period handling
+- [x] Payment recovery handling
 - [x] Invalid domain format rejection
 - [x] DNS verification failure messages
 - [x] Duplicate domain prevention
@@ -290,9 +309,9 @@ NEXT_PUBLIC_APP_URL=https://bublr.life
 ## Security Measures
 
 ✅ **Webhook Security**
-- Signature verification for all webhooks
+- HMAC-SHA256 signature verification
 - Raw body parsing to validate signatures
-- Timestamp validation
+- User ID validation from custom data
 
 ✅ **Authentication**
 - Bearer token authentication for all user APIs
@@ -320,14 +339,14 @@ NEXT_PUBLIC_APP_URL=https://bublr.life
 - Middleware lookup query optimized with active domain check
 - Subscription status cached on client side
 - Loading states prevent duplicate requests
-- Grace period checked once per request
+- Past_due status allows domain to remain active during payment recovery
 
 ## Future Enhancements
 
 1. **Email Notifications**
    - Payment success confirmation
    - Domain verification success
-   - Grace period warnings
+   - Payment retry notifications
    - Subscription expiry alerts
 
 2. **Analytics Dashboard**
@@ -360,13 +379,13 @@ NEXT_PUBLIC_APP_URL=https://bublr.life
 
 Before deploying to production:
 
-- [ ] Set up Dodo Payments account and product
-- [ ] Configure webhook endpoint
+- [ ] Set up Lemon Squeezy account and product
+- [ ] Configure webhook endpoint at https://app.lemonsqueezy.com/settings/webhooks
 - [ ] Add environment variables to hosting platform
-- [ ] Test webhook with Dodo Payments testing tool
+- [ ] Test webhook with Lemon Squeezy testing tool
 - [ ] Test with real domain and DNS
 - [ ] Verify middleware routing works
-- [ ] Test all subscription states
+- [ ] Test all subscription states (especially past_due)
 - [ ] Set up monitoring for webhook failures
 - [ ] Document DNS setup for users
 - [ ] Create support documentation
@@ -375,27 +394,39 @@ Before deploying to production:
 ## Support & Documentation
 
 - **Setup Guide**: See `CUSTOM_DOMAIN_SETUP.md`
-- **Dodo Payments Docs**: https://docs.dodopayments.com/
+- **Lemon Squeezy Docs**: https://docs.lemonsqueezy.com/
 - **DNS Help**: https://dnschecker.org/
+
+## Migration from Dodo Payments
+
+This implementation has been migrated from Dodo Payments to Lemon Squeezy. Key changes include:
+
+- Replaced `dodopayments` SDK with `@lemonsqueezy/lemonsqueezy.js`
+- Removed `standardwebhooks` dependency, using native Node.js crypto for HMAC-SHA256 verification
+- Updated webhook event mapping to Lemon Squeezy event names
+- Removed custom 3-day grace period in favor of Lemon Squeezy's automatic dunning system
+- Updated subscription status values to match Lemon Squeezy statuses
+- Removed `subscriptionGracePeriodEnds` field from database schema
 
 ## Conclusion
 
-The custom domain feature is fully implemented and ready for testing. All core functionality is in place, including subscription management, DNS verification, custom routing, and comprehensive UI states. The feature follows security best practices and provides a smooth user experience.
+The custom domain feature is fully implemented with Lemon Squeezy integration and ready for testing. All core functionality is in place, including subscription management, DNS verification, custom routing, payment recovery, and comprehensive UI states. The feature follows security best practices and provides a smooth user experience.
 
 ### Key Statistics
-- **16 files changed**
-- **1,360+ lines added**
-- **10 new API endpoints**
+- **10+ files modified**
+- **1,200+ lines of code**
+- **10 API endpoints**
 - **5 UI states implemented**
 - **Full webhook integration**
 - **Complete DNS verification**
+- **Automatic payment recovery**
 
 The implementation is production-ready pending:
-1. Dodo Payments account setup
+1. Lemon Squeezy account setup and product configuration
 2. Environment variable configuration
 3. DNS configuration for your domain
 4. Testing with real subscription and domain
 
 ---
 
-**Implementation completed successfully!** 🎉
+**Migration to Lemon Squeezy completed successfully!** 🎉
